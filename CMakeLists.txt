@@ -9,9 +9,9 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 
 pybind11_add_module(_cpp
-  src/lanc_tools/_cpp/bindings.cpp
-  src/lanc_tools/_cpp/flare.cpp
-  src/lanc_tools/_cpp/rfmix.cpp
+  src/lanctools/_cpp/bindings.cpp
+  src/lanctools/_cpp/flare.cpp
+  src/lanctools/_cpp/rfmix.cpp
 )
 install(TARGETS _cpp DESTINATION ${SKBUILD_PROJECT_NAME})
 

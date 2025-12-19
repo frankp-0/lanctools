@@ -5,7 +5,7 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(_cpp, m) {
-  m.doc() = "lanc_tools C++ backend";
+  m.doc() = "lanctools C++ backend";
   bind_rfmix(m);
   bind_flare(m);
 }

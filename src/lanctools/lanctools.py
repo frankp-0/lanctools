@@ -8,7 +8,7 @@ import numba as nb
 import pandas as pd
 from pandas import DataFrame
 from typing import Optional
-from lanc_tools._cpp import read_rfmix, read_flare
+from lanctools._cpp import read_rfmix, read_flare
 
 
 ### ─────────────────────────────────────────────────────────────
