@@ -1,0 +1,37 @@
+[project]
+name = "lanc-tools"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [{ name = "Frank Ockerman", email = "frank.ockerman@gmail.com" }]
+requires-python = ">=3.12"
+dependencies = [
+    "numba>=0.63.1",
+    "numpy>=2.3.5",
+    "pandas>=2.3.3",
+    "pgenlib>=0.93.0",
+]
+
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+build-dir = "build/{wheel_tag}"
+
+[tool.uv]
+cache-keys = [
+  { file = "pyproject.toml" },
+  { file = "src/**/*.{h,c,hpp,cpp}" },
+  { file = "CMakeLists.txt" },
+]
+
+[build-system]
+requires = ["scikit-build-core>=0.10", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[dependency-groups]
+dev = [
+    "ipython>=9.8.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
