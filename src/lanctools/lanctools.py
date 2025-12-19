@@ -242,8 +242,8 @@ def _get_geno(
 
 def _deconv_geno(geno: NDArray, lanc: NDArray, ancestries: NDArray):
     """Get ancestry deconvoluted/masked genotypes"""
-    left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.float32)
-    right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(np.float32)
+    left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.int32)
+    right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(np.int32)
     geno_masked = left_haps_mask * geno[:, :, 0:1] + right_haps_mask * geno[:, :, 1:2]
     return geno_masked
 
@@ -339,11 +339,9 @@ class GenoAncestryDataset:
         """
         lanc = np.asarray(self.get_lanc(indices), dtype=np.uint8)
         ancestries = np.arange(len(self.ancestries), dtype=np.uint8)
-        left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(
-            np.float32
-        )
+        left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.int32)
         right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(
-            np.float32
+            np.int32
         )
         return left_haps_mask + right_haps_mask
 

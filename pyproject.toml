@@ -32,10 +32,22 @@ requires = ["scikit-build-core>=0.10", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [dependency-groups]
-dev = ["ipython>=9.6.0"]
+dev = ["ipython>=9.6.0", "pytest>=9.0.2", "pytest-cov>=7.0.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [project.scripts]
 lanctools = "lanctools.cli:main_entry"
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = [
+  "--strict-markers",
+  "--strict-config",
+  "--cov=src",
+  "--cov-report=term-missing",
+]
