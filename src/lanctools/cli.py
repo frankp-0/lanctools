@@ -40,13 +40,11 @@ def main(
 
 @app.command()
 def convert_flare(
+    file: str = typer.Option(..., help="Local ancestry file(s), comma-separated"),
     plink_prefix: str = typer.Option(
         ..., help="Plink2 file prefix(es), comma-separated"
     ),
-    lanc_file: str = typer.Option(
-        ..., help="Local ancestry .lanc file(s), comma-separated"
-    ),
-    out_prefix: str = typer.Option(
+    output: str = typer.Option(
         ...,
         help="Output prefix(es), comma-separated, one per plink_prefix",
     ),
@@ -54,22 +52,20 @@ def convert_flare(
     from . import convert_lanc
 
     plinks = list_from_csv(plink_prefix)
-    lancs = list_from_csv(lanc_file)
-    out_prefixes = list_from_csv(out_prefix)
+    inputs = list_from_csv(file)
+    outputs = list_from_csv(output)
 
-    for plink, lanc, out in zip(plinks, lancs, out_prefixes):
-        convert_lanc(file=lanc, file_fmt="FLARE", plink_prefix=plink, output=out)
+    for plink, input, out in zip(plinks, inputs, outputs):
+        convert_lanc(file=input, file_fmt="FLARE", plink_prefix=plink, output=out)
 
 
 @app.command()
 def convert_rfmix(
+    file: str = typer.Option(..., help="Local ancestry file(s), comma-separated"),
     plink_prefix: str = typer.Option(
         ..., help="Plink2 file prefix(es), comma-separated"
     ),
-    lanc_file: str = typer.Option(
-        ..., help="Local ancestry .lanc file(s), comma-separated"
-    ),
-    out_prefix: str = typer.Option(
+    outputs: str = typer.Option(
         ...,
         help="Output prefix(es), comma-separated, one per plink_prefix",
     ),
@@ -77,11 +73,11 @@ def convert_rfmix(
     from . import convert_lanc
 
     plinks = list_from_csv(plink_prefix)
-    lancs = list_from_csv(lanc_file)
-    out_prefixes = list_from_csv(out_prefix)
+    inputs = list_from_csv(file)
+    output = list_from_csv(outputs)
 
-    for plink, lanc, out in zip(plinks, lancs, out_prefixes):
-        convert_lanc(file=lanc, file_fmt="RFMix", plink_prefix=plink, output=out)
+    for plink, input, out in zip(plinks, inputs, output):
+        convert_lanc(file=input, file_fmt="RFMix", plink_prefix=plink, output=out)
 
 
 def main_entry():
