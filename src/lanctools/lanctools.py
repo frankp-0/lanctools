@@ -326,16 +326,6 @@ class GenoAncestryDataset:
         )
         return np.stack((left, right), axis=-1)
 
-    def get_lanc_cpp(self, indices: NDArray[np.unsignedinteger]):
-        left, right = query_lanc(
-            self.lanc.left_haps,
-            self.lanc.right_haps,
-            self.lanc.breakpoints,
-            self.lanc.offsets,
-            indices,
-        )
-        return np.stack((left, right), axis=-1)
-
     def get_lanc_unphased(
         self, indices: NDArray[np.unsignedinteger]
     ) -> NDArray[np.uint8]:
