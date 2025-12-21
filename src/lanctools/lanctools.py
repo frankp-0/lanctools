@@ -8,7 +8,7 @@ import numba as nb
 import pandas as pd
 from pandas import DataFrame
 from typing import Optional
-from lanctools._cpp import read_rfmix, read_flare
+from lanctools._cpp import read_rfmix, read_flare, query_lanc
 
 
 ### ─────────────────────────────────────────────────────────────
@@ -318,6 +318,16 @@ class GenoAncestryDataset:
             An (N, V, 2) ndarray of local ancestries
         """
         left, right = _get_lanc(
+            self.lanc.left_haps,
+            self.lanc.right_haps,
+            self.lanc.breakpoints,
+            self.lanc.offsets,
+            indices,
+        )
+        return np.stack((left, right), axis=-1)
+
+    def get_lanc_cpp(self, indices: NDArray[np.unsignedinteger]):
+        left, right = query_lanc(
             self.lanc.left_haps,
             self.lanc.right_haps,
             self.lanc.breakpoints,
