@@ -27,7 +27,7 @@ def setup_logging(verbose: bool, quiet: bool) -> None:
 
 def get_version() -> str:
     try:
-        return version("lanctools")  # must match your project name
+        return version("lanctools")
     except PackageNotFoundError:
         return "unknown"
 
