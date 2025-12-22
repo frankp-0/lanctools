@@ -7,8 +7,8 @@ import typer
 from typing import Optional, List
 from importlib.metadata import version, PackageNotFoundError
 
-app = typer.Typer(help="lagga CLI")
-logger = logging.getLogger("lagga")
+app = typer.Typer(help="lanctools CLI")
+logger = logging.getLogger("lanctools")
 
 
 def list_from_csv(arg: str) -> List[str]:
@@ -42,7 +42,7 @@ def main(
 
 @app.command(name="version", help="Show the CLI version and exit")
 def show_version():
-    typer.echo(f"lagga {get_version()}")
+    typer.echo(f"lanctools {get_version()}")
 
 
 @app.command()
