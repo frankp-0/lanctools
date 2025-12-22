@@ -18,7 +18,6 @@ jobs:
     - name: Install uv
       uses: astral-sh/setup-uv@v7
       with:
-        # optional: pin to a uv version
         version: "0.9.18"
 
     - name: Install Python
@@ -29,8 +28,11 @@ jobs:
         uv venv
         uv sync --locked
 
-    - name: Build wheels
-      run: uv build
+    - name: Install cibuildwheel
+      run: uv pip install cibuildwheel
+
+    - name: Build wheels with cibuildwheel
+      run: uv run -m cibuildwheel --output-dir dist
 
     - name: Upload wheels
       if: matrix.os == 'ubuntu-latest'
