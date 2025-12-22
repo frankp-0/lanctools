@@ -7,24 +7,23 @@ on:
 
 jobs:
   linux:
-    name: Build manylinux wheels
+    name: Build Linux manylinux wheels
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build wheels (manylinux)
+      - name: Build manylinux wheels
         run: |
-          docker run --rm \
-            -v $PWD:/io \
-            quay.io/pypa/manylinux2014_x86_64 \
-            bash -c "
-              cd /io &&
-              python -m pip install -U pip uv &&
-              uv build
-            "
+          docker run --rm -v $PWD:/io quay.io/pypa/manylinux2014_x86_64 \
+          bash -c "
+            cd /io &&
+            python3 -m ensurepip &&
+            python3 -m pip install --upgrade pip uv &&
+            uv build
+          "
 
-      - name: Upload wheels
+      - name: Upload Linux wheels
         uses: actions/upload-artifact@v4
         with:
           name: linux-wheels
@@ -37,17 +36,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        run: |
-          python3 -m pip install -U pip uv
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10
 
-      - name: Build wheels (universal2)
+      - name: Build wheels
         env:
           CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
         run: |
+          python -m pip install --upgrade pip uv
           uv build
 
-      - name: Upload wheels
+      - name: Upload macOS wheels
         uses: actions/upload-artifact@v4
         with:
           name: macos-wheels
@@ -61,15 +62,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Download built wheels
         uses: actions/download-artifact@v4
         with:
           path: dist
 
-      - name: Publish
+      - name: Publish to PyPI
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          python -m pip install -U pip uv
+          python -m pip install --upgrade pip uv
           uv publish dist/**/*.whl
 
