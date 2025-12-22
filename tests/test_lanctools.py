@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pandas as pd
 from lanctools import LancData
-from lanctools import convert_lanc
+from lanctools import convert_to_lanc
 from lanctools.core import _parse_lanc_line, _read_lanc
 
 
@@ -46,7 +46,7 @@ def test_read_lanc(tmp_path):
 
 def test_convert_flare(tmp_path):
     tmp_lanc_path = tmp_path / "test_flare.lanc"
-    convert_lanc(
+    convert_to_lanc(
         file="tests/data/chr20.flare.anc.vcf.gz",
         file_fmt="FLARE",
         plink_prefix="tests/data/chr20",

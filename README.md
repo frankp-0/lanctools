@@ -39,9 +39,9 @@ lanc_geno = ld.get_lanc_geno(idx_var) # (N, 100, len(ancestries))
 To convert a FLARE (or RFMix) local ancestry file to `.lanc`:
 
 ```
-from lanctools import convert_lanc
+from lanctools import convert_to_lanc
 
-convert_lanc(
+convert_to_lanc(
     file="chr1.anc.vcf.gz",
     file_fmt="FLARE",
     plink_prefix="chr1",

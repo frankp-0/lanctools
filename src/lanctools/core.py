@@ -67,7 +67,7 @@ def _get_info(pvar: PvarReader, indices: NDArray[np.unsignedinteger]) -> DataFra
     return df
 
 
-def convert_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
+def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
     """Convert local ancestry files to .lanc format
 
     This function currently only supports FLARE and RFMix input.

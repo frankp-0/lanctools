@@ -49,14 +49,14 @@ def convert_flare(
         help="Output prefix(es), comma-separated, one per plink_prefix",
     ),
 ):
-    from . import convert_lanc
+    from . import convert_to_lanc
 
     plinks = list_from_csv(plink_prefix)
     inputs = list_from_csv(file)
     outputs = list_from_csv(output)
 
     for plink, input, out in zip(plinks, inputs, outputs):
-        convert_lanc(file=input, file_fmt="FLARE", plink_prefix=plink, output=out)
+        convert_to_lanc(file=input, file_fmt="FLARE", plink_prefix=plink, output=out)
 
 
 @app.command()
@@ -70,14 +70,14 @@ def convert_rfmix(
         help="Output prefix(es), comma-separated, one per plink_prefix",
     ),
 ):
-    from . import convert_lanc
+    from . import convert_to_lanc
 
     plinks = list_from_csv(plink_prefix)
     inputs = list_from_csv(file)
     output = list_from_csv(outputs)
 
     for plink, input, out in zip(plinks, inputs, output):
-        convert_lanc(file=input, file_fmt="RFMix", plink_prefix=plink, output=out)
+        convert_to_lanc(file=input, file_fmt="RFMix", plink_prefix=plink, output=out)
 
 
 def main_entry():
