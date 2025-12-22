@@ -1,5 +1,4 @@
 from __future__ import annotations
-from dataclasses import dataclass
 from pathlib import Path
 from pgenlib import PgenReader, PvarReader
 import numpy as np
@@ -8,34 +7,11 @@ import numba as nb
 import pandas as pd
 from pandas import DataFrame
 from typing import Optional
-from lanctools._cpp import read_rfmix, read_flare, query_lanc
+from ._cpp import read_rfmix, read_flare
 
 
 ### ─────────────────────────────────────────────────────────────
-### Data structures
-### ─────────────────────────────────────────────────────────────
-
-
-@dataclass
-class FlatLanc:
-    """
-    Stores .lanc file ancestry data in a flattened structure
-
-    Attributes:
-        left_haps: concatenated left haplotypes for all samples
-        right_haps: concatenated right haplotypes for all samples
-        breakpoints: concatenated breakpoints for all samples
-        offsets: cumulative end indices separating samples
-    """
-
-    left_haps: NDArray[np.uint8]
-    right_haps: NDArray[np.uint8]
-    breakpoints: NDArray[np.uint32]
-    offsets: NDArray[np.uint32]
-
-
-### ─────────────────────────────────────────────────────────────
-### I/O
+### Functions
 ### ─────────────────────────────────────────────────────────────
 
 
@@ -81,20 +57,12 @@ def _read_lanc(path: str | Path) -> FlatLanc:
 
 
 def _get_info(pvar: PvarReader, indices: NDArray[np.unsignedinteger]) -> DataFrame:
-    """Query variant information from pvar file
-
-    Args:
-        indices: A (V,) ndarray with indices of variants to query
-
-    Returns:
-        A (V, 6) pandas dataframe which information for each variant
-    """
     chrom = [pvar.get_variant_chrom(i).decode("utf8") for i in indices]
     pos = [pvar.get_variant_pos(i) for i in indices]
     ref = [pvar.get_allele_code(i, 0).decode("utf8") for i in indices]
     alt = [pvar.get_allele_code(i, 1).decode("utf8") for i in indices]
-    rsid = [pvar.get_variant_id(i).decode("utf8") for i in indices]
-    df = DataFrame({"chrom": chrom, "pos": pos, "ref": ref, "alt": alt, "rsid": rsid})
+    id = [pvar.get_variant_id(i).decode("utf8") for i in indices]
+    df = DataFrame({"chrom": chrom, "pos": pos, "ref": ref, "alt": alt, "id": id})
     df["pos"] = df["pos"].astype("uint32")
     return df
 
@@ -192,11 +160,6 @@ def convert_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
         f.write(header + "\n" + "\n".join(lines.astype(str)) + "\n")
 
 
-### ─────────────────────────────────────────────────────────────
-### Core
-### ─────────────────────────────────────────────────────────────
-
-
 @nb.njit(parallel=True)
 def _get_lanc(
     left_haps: NDArray[np.uint8],
@@ -240,54 +203,70 @@ def _get_geno(
     return alleles.reshape(v, n, 2).transpose(1, 0, 2)
 
 
-def _deconv_geno(geno: NDArray, lanc: NDArray, ancestries: NDArray):
-    """Get ancestry deconvoluted/masked genotypes"""
-    left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.int32)
-    right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(np.int32)
-    geno_masked = left_haps_mask * geno[:, :, 0:1] + right_haps_mask * geno[:, :, 1:2]
-    return geno_masked
-
-
 ### ─────────────────────────────────────────────────────────────
-### GenoAncestryDataset
+### Data structures
 ### ─────────────────────────────────────────────────────────────
 
 
-@dataclass
-class GenoAncestryDataset:
-    """The genotype and local ancestry data for a single chromosome/dataset
+class FlatLanc:
+    """Stores .lanc file ancestry data in a flattened structure for fast querying.
 
-    Attributes:
-        pgen: A pgenlib PgenReader object
-        pvar: A pgenlib PvarReader object
-        lanc: A FlatLanc object containing local ancestry data
-        ancestries: An ordered list of ancestry names
-        plink_prefix: The prefix for the corresponding plink2 fileset
+    :param right_haps: Concatenated right haplotypes for all samples, shape (H,), dtype uint8.
+    :type right_haps: numpy.ndarray
+    :param left_haps: Concatenated left haplotypes for all samples, shape (H,), dtype uint8.
+    :type left_haps: numpy.ndarray
+    :param breakpoints: Concatenated breakpoints for all samples, shape (H,), dtype uint32.
+    :type breakpoints: numpy.ndarray
+    :param offsets: Cumulative end indices separating samples.
+    :type offsets: numpy.ndarray
     """
 
-    pgen: PgenReader
-    pvar: PvarReader
-    lanc: FlatLanc
-    ancestries: list[str]
-    plink_prefix: str
+    def __init__(
+        self,
+        left_haps: NDArray[np.uint8],
+        right_haps: NDArray[np.uint8],
+        breakpoints: NDArray[np.uint32],
+        offsets: NDArray[np.uint32],
+    ):
+        self.left_haps = left_haps
+        self.right_haps = right_haps
+        self.breakpoints = breakpoints
+        self.offsets = offsets
 
-    @classmethod
-    def from_plink(
-        cls,
+
+class LancData:
+    """The genotype and local ancestry data for a single chromosome/dataset.
+
+    :param pgen: A pgenlib PgenReader object.
+    :type pgen: pgenlib.PgenReader
+    :param pvar: A pgenlib PVarReader object.
+    :type pvar: pgenlib.PvarReader
+    :param lanc: A FlatLanc object with local ancestry data.
+    :type lanc: FlatLanc
+    :param ancestries: An ordered list of ancestry names. The integer codes in
+        the .lanc file and `self.lanc` correspond to indices in this list (e.g.
+        0 -> ancestries[0]).
+    :type ancestries: list[str]
+    :param plink_prefix: The prefix for the corresponding plink2 fileset.
+    :type plink_prefix: str
+    """
+
+    def __init__(
+        self,
         plink_prefix: str,
-        lanc_file: str | Path,
+        lanc_file: str,
         ancestries: Optional[list[str]] = None,
-    ) -> GenoAncestryDataset:
-        """Constructs a GenoAncestryDataset from plink2 files
+    ):
+        """Constructs a LancData from plink2 files.
 
-        Args:
-            plink_prefix: A string with the prefix for a plink2 fileset
-            lanc_file: A string or path for a .lanc file
-            ancestries: An optional list of ordered ancestry names
-            corresponding to the .lanc file
-
-        Returns:
-            A GenoAncestryDataset
+        :param plink_prefix: A string with the prefix for a plink2 fileset.
+        :type plink_prefix: str
+        :param lanc_file: A string with the path to a .lanc file.
+        :type lanc_file: str
+        :param ancestries: An optional list of ordered ancestry names corresponding to the .lanc file.
+        :type ancestries: list[str]
+        :return: A LancData object
+        :rtype: LancData
         """
         pgen = PgenReader(bytes(plink_prefix + ".pgen", "utf8"))
         pvar = PvarReader(bytes(plink_prefix + ".pvar", "utf8"))
@@ -297,26 +276,41 @@ class GenoAncestryDataset:
             all_values = np.concatenate([lanc.left_haps, lanc.right_haps])
             ancestries = [str(i) for i in np.unique(all_values)]
 
-        return cls(
-            pgen=pgen,
-            pvar=pvar,
-            lanc=lanc,
-            ancestries=ancestries,
-            plink_prefix=plink_prefix,
-        )
+        self.pgen = pgen
+        self.pvar = pvar
+        self.lanc = lanc
+        self.ancestries = ancestries
+        self.plink_prefix = plink_prefix
 
-    def get_info(self, indices: NDArray[np.unsignedinteger]) -> DataFrame:
+    def get_info(self, indices: NDArray[np.uint32]) -> DataFrame:
+        """Query info for a set of variants.
+
+        :param indices: Array of variant indices in pvar order (0-based), shape
+            ``(V,)``, dtype ``int32``.
+        :type indices: numpy.ndarray
+        :return:
+            A pandas ``DataFrame`` with one row per variant and the following columns:
+
+            - ``chrom`` (str): Chromosome name
+            - ``pos`` (uint32): 1-based genomic position
+            - ``ref`` (str): Reference allele
+            - ``alt`` (str): Alternate allele
+            - ``rsid`` (str): Variant identifier
+        :rtype: pandas.DataFrame
+        """
+
         return _get_info(self.pvar, indices)
 
     def get_lanc(self, indices: NDArray[np.unsignedinteger]) -> NDArray[np.uint8]:
-        """Query local ancestries
+        """Query phased local ancestry.
 
-        Args:
-            indices: A (V,) ndarray with indices of variants to query
-
-        Returns:
-            An (N, V, 2) ndarray of local ancestries
+        :param indices: Array of variant indices in pvar order (0-based), shape
+            ``(V,)``, dtype ``int32``.
+        :type indices: numpy.ndarray
+        :return: Local ancestries, shape ``(N, V, 2)``, dtype ``uint8``
+        :rtype: numpy.ndarray
         """
+
         left, right = _get_lanc(
             self.lanc.left_haps,
             self.lanc.right_haps,
@@ -326,17 +320,16 @@ class GenoAncestryDataset:
         )
         return np.stack((left, right), axis=-1)
 
-    def get_lanc_unphased(
-        self, indices: NDArray[np.unsignedinteger]
-    ) -> NDArray[np.uint8]:
-        """Query unphased local ancestry
+    def get_lanc_dosage(self, indices: NDArray[np.uint32]) -> NDArray[np.uint8]:
+        """Query local ancestry dosage.
 
-        Args:
-            indices: A (V,) ndarray with indices of variants to query
-
-        Returns:
-            An (N, V, len(self.ancestries) ndarray of unphased local ancestries
+        :param indices: Array of variant indices in pvar order (0-based), shape
+            ``(V,)``, dtype ``int32``.
+        :type indices: numpy.ndarray
+        :return: Local ancestry dosages, shape ``(N, V, len(self.ancestries))``, dtype ``uint8``.
+        :rtype: numpy.ndarray
         """
+
         lanc = np.asarray(self.get_lanc(indices), dtype=np.uint8)
         ancestries = np.arange(len(self.ancestries), dtype=np.uint8)
         left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.int32)
@@ -345,25 +338,35 @@ class GenoAncestryDataset:
         )
         return left_haps_mask + right_haps_mask
 
-    def get_geno(self, indices: NDArray[np.unsignedinteger]) -> NDArray[np.int32]:
-        """Query phased genotypes
-        Args:
-            indices: A (V,) ndarray with indices of variants to query
-        Returns:
-            An (N, V, 2) ndarray of phased genotypes
+    def get_geno(self, indices: NDArray[np.uint32]) -> NDArray[np.int32]:
+        """Query phased genotypes.
+
+        :param indices: Array of variant indices in pvar order (0-based), shape
+            ``(V,)``, dtype ``int32``.
+        :type indices: numpy.ndarray
+        :return: Phased genotypes, shape ``(N, V, 2)``, dtype ``int32``.
+        :rtype: numpy.ndarray
         """
+
         return _get_geno(self.pgen, indices)
 
-    def get_lanc_geno(self, indices: NDArray[np.unsignedinteger]) -> NDArray:
-        """Query genotypes deconvoluted/masked by ancestry
+    def get_lanc_geno(self, indices: NDArray[np.unsignedinteger]) -> NDArray[np.int32]:
+        """Query genotypes deconvoluted/masked by ancestry.
 
-        Args:
-            indices: A (V,) ndarray with indices of variants to query
-
-        Returns:
-            An (N, V, len(self.ancestries)) jax array of genotypes masked by ancestry
+        :param indices: Array of variant indices in pvar order (0-based), shape
+            ``(V,)``, dtype ``int32``.
+        :type indices: numpy.ndarray
+        :return: Genotypes masked by ancestry, shape ``(N, V, len(self.ancestries))``, dtype ``int32``.
+        :rtype: numpy.ndarray
         """
         geno = np.asarray(self.get_geno(indices), dtype=np.int32)
         lanc = np.asarray(self.get_lanc(indices), dtype=np.uint8)
         ancestries = np.arange(len(self.ancestries), dtype=np.uint8)
-        return _deconv_geno(geno, lanc, ancestries)
+        left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.int32)
+        right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(
+            np.int32
+        )
+        geno_masked = (
+            left_haps_mask * geno[:, :, 0:1] + right_haps_mask * geno[:, :, 1:2]
+        )
+        return geno_masked

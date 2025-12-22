@@ -1,14 +1,14 @@
 import pytest
 import numpy as np
 import pandas as pd
-from lanctools import GenoAncestryDataset as GAD
+from lanctools import LancData
 from lanctools import convert_lanc
-from lanctools.lanctools import _parse_lanc_line, _read_lanc
+from lanctools.core import _parse_lanc_line, _read_lanc
 
 
 @pytest.fixture
-def chr20_GAD():
-    dataset = GAD.from_plink(
+def chr20_data():
+    dataset = LancData(
         plink_prefix="tests/data/chr20", lanc_file="tests/data/chr20.lanc"
     )
     return dataset
@@ -60,9 +60,9 @@ def test_convert_flare(tmp_path):
         assert true_lanc.read() == test_lanc.read()
 
 
-def test_get_info(chr20_GAD):
-    nvar = chr20_GAD.pvar.get_variant_ct()
-    df_info = chr20_GAD.get_info(np.arange(nvar))
+def test_get_info(chr20_data):
+    nvar = chr20_data.pvar.get_variant_ct()
+    df_info = chr20_data.get_info(np.arange(nvar))
     df_true = pd.read_json(
         "tests/data/chr20_info.json",
         dtype={"chrom": str, "pos": np.uint32, "ref": str, "alt": str, "rsid": str},
@@ -70,8 +70,9 @@ def test_get_info(chr20_GAD):
     pd.testing.assert_frame_equal(df_info, df_true)
 
 
-def test_get_lanc(chr20_GAD):
-    lanc_arr = chr20_GAD.get_lanc(np.arange(10, 14, dtype=np.uint32))
+# TODO: test out of bounds indices
+def test_get_lanc(chr20_data):
+    lanc_arr = chr20_data.get_lanc(np.arange(10, 14, dtype=np.uint32))
     lanc_true = np.asarray(
         [
             [[1, 0], [1, 0], [1, 0], [1, 0]],
@@ -101,8 +102,8 @@ def test_get_lanc(chr20_GAD):
     np.testing.assert_equal(lanc_arr, lanc_true)
 
 
-def test_get_lanc_unphased(chr20_GAD):
-    lanc_arr = chr20_GAD.get_lanc_unphased(np.arange(10, 14, dtype=np.uint32))
+def test_get_lanc_dosage(chr20_data):
+    lanc_arr = chr20_data.get_lanc_dosage(np.arange(10, 14, dtype=np.uint32))
     lanc_true = np.asarray(
         [
             [[1.0, 1.0], [1.0, 1.0], [1.0, 1.0], [1.0, 1.0]],
@@ -132,8 +133,8 @@ def test_get_lanc_unphased(chr20_GAD):
     np.testing.assert_equal(lanc_arr, lanc_true)
 
 
-def test_get_geno(chr20_GAD):
-    geno_arr = chr20_GAD.get_geno(np.arange(10, 14, dtype=np.uint32))
+def test_get_geno(chr20_data):
+    geno_arr = chr20_data.get_geno(np.arange(10, 14, dtype=np.uint32))
     geno_true = np.asarray(
         [
             [[0, 0], [0, 0], [0, 0], [0, 0]],
@@ -163,8 +164,8 @@ def test_get_geno(chr20_GAD):
     np.testing.assert_equal(geno_arr, geno_true)
 
 
-def test_get_lanc_geno(chr20_GAD):
-    lanc_geno_arr = chr20_GAD.get_lanc_geno(np.arange(10, 14, dtype=np.uint32))
+def test_get_lanc_geno(chr20_data):
+    lanc_geno_arr = chr20_data.get_lanc_geno(np.arange(10, 14, dtype=np.uint32))
     lanc_geno_true = np.asarray(
         [
             [[0, 0], [0, 0], [0, 0], [0, 0]],

@@ -32,7 +32,13 @@ requires = ["scikit-build-core>=0.10", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [dependency-groups]
-dev = ["ipython>=9.6.0", "pytest>=9.0.2", "pytest-cov>=7.0.0"]
+dev = [
+    "ipython>=9.6.0",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "sphinx>=9.0.4",
+    "sphinx-autodoc-typehints>=3.6.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
