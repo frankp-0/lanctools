@@ -1,26 +1,28 @@
 # lanctools
 
-Tools for working with local ancestry data in the `.lanc` file format.
-This package contains two main components:
+Tools for working with phased local ancestry data stored in the `.lanc` file format, as defined by Admix-kit [^1].
 
-1. A function (and corresponding CLI) for converting FLARE and RFMix files to
-the .lanc format
-2. A `LancData` class with methods for fast querying of local ancestry and
-local ancestry-masked genotypes
+`lanctools` is designed to provide **fast local ancestry queries** and convenient conversion from external formats (e.g., FLARE[^2], RFMix[^3]). It focuses on efficient access to `.lanc` data and is **not** intended to replace the full functionality of Admix-kit.
+
+## Features
+
+- Efficient random access to phased local ancestry data  
+- Local ancestry-masked genotype queries  
+- Conversion from FLARE and RFMix output to `.lanc` format
+- Python API and command-line interface (CLI)
 
 ## Installation
 
-```
+```bash
 pip install lanctools
 ```
 
 ## Quickstart
 
-To load and query local ancestry data for a set of variants::
+### Querying Local Ancestry Data
 
-```
+```python
 import numpy as np
-
 from lanctools import LancData
 
 ld = LancData(
@@ -31,14 +33,20 @@ ld = LancData(
 
 idx_var = np.arange(100, dtype=np.uint32)
 
-lanc = ld.get_lanc(idx_var) # (N, 100, 2): phased local ancestry
-geno = ld.get_geno(idx_var) # (N, 100, 2): phased genotypes
-lanc_geno = ld.get_lanc_geno(idx_var) # (N, 100, len(ancestries))
+# Get phased local ancestry: shape (N, 100, 2)
+lanc = ld.get_lanc(idx_var)
+
+# Get phased genotypes: shape (N, 100, 2)
+geno = ld.get_geno(idx_var)
+
+# Get ancestry-masked genotypes: shape (N, 100, len(ancestries))
+lanc_geno = ld.get_lanc_geno(idx_var)
+
 ```
 
-To convert a FLARE (or RFMix) local ancestry file to `.lanc`:
+### Converting FLARE or RFMix Files to .lanc
 
-```
+```python
 from lanctools import convert_to_lanc
 
 convert_to_lanc(
@@ -49,8 +57,14 @@ convert_to_lanc(
 )
 ```
 
-To perform the above conversion using the CLI tool:
+### Command-Line Interface
 
-```
+```bash
 lanctools convert-flare --file chr1.anc.vcf.gz --plink_prefix chr1 --output chr1.lanc
 ```
+
+## Citations
+
+[^1]: Hou, K. et al. Admix-kit: an integrated toolkit and pipeline for genetic analyses of admixed populations. Bioinformatics 40, btae148 (2024). [paper](https://doi-org.libproxy.lib.unc.edu/10.1093/bioinformatics/btae148) [software](https://github.com/KangchengHou/admix-kit)
+[^2]: Browning, S. R., Waples, R. K. & Browning, B. L. Fast, accurate local ancestry inference with FLARE. Am J Hum Genet 110, 326–335 (2023). [paper](https://doi.org/10.1016/j.ajhg.2022.12.010) [software](https://github.com/browning-lab/flare)
+[^3]: Maples, B. K., Gravel, S., Kenny, E. E. & Bustamante, C. D. RFMix: A Discriminative Modeling Approach for Rapid and Robust Local-Ancestry Inference. Am J Hum Genet 93, 278–288 (2013). [paper](<https://doi.org/10.1016/j.ajhg.2013.06.020>) [software](https://github.com/slowkoni/rfmix)
