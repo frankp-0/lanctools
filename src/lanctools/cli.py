@@ -1,8 +1,7 @@
 import logging
 import typer
 from typing import Optional, List
-
-from . import __version__
+from importlib.metadata import version, PackageNotFoundError
 
 app = typer.Typer(help="lagga CLI")
 logger = logging.getLogger("lagga")
@@ -22,20 +21,24 @@ def setup_logging(verbose: bool, quiet: bool) -> None:
     logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
 
 
+def get_version() -> str:
+    try:
+        return version("lanctools")  # must match your project name
+    except PackageNotFoundError:
+        return "unknown"
+
+
 @app.callback()
 def main(
-    version: Optional[bool] = typer.Option(
-        None,
-        "--version",
-        "-v",
-        callback=lambda v: print(f"myproject {__version__}") if v else None,
-        is_eager=True,
-        help="Show version and exit",
-    ),
     verbose: bool = typer.Option(False, "--verbose"),
     quiet: bool = typer.Option(False, "--quiet"),
 ):
     setup_logging(verbose, quiet)
+
+
+@app.command(name="version", help="Show the CLI version and exit")
+def show_version():
+    typer.echo(f"lagga {get_version()}")
 
 
 @app.command()
