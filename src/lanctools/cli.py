@@ -1,3 +1,7 @@
+# MIT License
+# Copyright (c) 2025 Franklin Ockerman
+# See LICENSE file for full license text
+
 import logging
 import typer
 from typing import Optional, List

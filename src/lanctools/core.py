@@ -1,3 +1,7 @@
+# MIT License
+# Copyright (c) 2025 Franklin Ockerman
+# See LICENSE file for full license text
+
 from __future__ import annotations
 from pathlib import Path
 from pgenlib import PgenReader, PvarReader
