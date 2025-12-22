@@ -43,7 +43,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: python-artifacts
+          name: python-artifacts-${{ matrix.os }}-${{ github.run_id }}
           path: |
             dist/*.whl
             dist/*.tar.gz
@@ -57,11 +57,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: python-artifacts
           path: dist
+
+      - name: Flatten artifacts into dist/
+        run: |
+          if [ -d dist ]; then
+            find dist -mindepth 2 -type f -exec mv -t dist -- {} + || true
+            find dist -type d -empty -delete || true
+          fi
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -70,4 +76,3 @@ jobs:
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: uv publish dist/*
-
