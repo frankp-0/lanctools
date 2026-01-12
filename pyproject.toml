@@ -15,6 +15,11 @@ dependencies = [
   "typer>=0.20.1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/frankp-0/lanctools"
+Repository = "https://github.com/frankp-0/lanctools"
+Issues = "https://github.com/frankp-0/lanctools/issues"
+
 [tool.scikit-build]
 minimum-version = "build-system.requires"
 build-dir = "build/{wheel_tag}"
