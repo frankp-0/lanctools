@@ -1,6 +1,6 @@
 [project]
 name = "lanctools"
-version = "0.1.3"
+version = "0.1.4"
 license = { text = "MIT" }
 description = "Tools for working with phased local ancestry data stored in the `.lanc` file format"
 readme = "README.md"
