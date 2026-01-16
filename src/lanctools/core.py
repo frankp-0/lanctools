@@ -178,6 +178,10 @@ def _get_lanc(
     left_out = np.empty((n_samples, n_variants), dtype=np.uint8)
     right_out = np.empty((n_samples, n_variants), dtype=np.uint8)
 
+    for i in range(1, len(indices)):
+        if indices[i] < indices[i - 1]:
+            raise ValueError("indices must be sorted ascending")
+
     for i in nb.prange(n_samples):
         start = offsets[i]
         end = offsets[i + 1]

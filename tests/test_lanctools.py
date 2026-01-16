@@ -102,6 +102,11 @@ def test_get_lanc(chr20_data):
     np.testing.assert_equal(lanc_arr, lanc_true)
 
 
+def test_get_lanc_unsorted(chr20_data):
+    with pytest.raises(ValueError, match="indices must be sorted ascending"):
+        lanc_arr = chr20_data.get_lanc(np.asarray([20, 21, 10, 14], dtype=np.uint32))
+
+
 def test_get_lanc_dosage(chr20_data):
     lanc_arr = chr20_data.get_lanc_dosage(np.arange(10, 14, dtype=np.uint32))
     lanc_true = np.asarray(
