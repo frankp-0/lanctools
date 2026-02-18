@@ -71,6 +71,38 @@ def _get_info(pvar: PvarReader, indices: NDArray[np.unsignedinteger]) -> DataFra
     return df
 
 
+def merge_lanc(files: list[str], outfile: str):
+    fs = [open(f, "r") for f in files]
+    line1s = [next(f).strip().split() for f in fs]
+    nvars = [int(l[0]) for l in line1s]
+    offset_bp = np.cumsum(nvars)[:-1]
+    offset_bp = np.insert(offset_bp, 0, 0)
+    nsamps = [int(l[1]) for l in line1s]
+    if len(set(nsamps)) > 1:
+        raise ValueError("Files have different numbers of samples")
+    nsamp = int(nsamps[0])
+    nvar = sum(nvars)
+    out_lines = []
+    for i in range(nsamp):
+        lines = [_parse_lanc_line(next(f)) for f in fs]
+        left_haps = np.concatenate([l[0] for l in lines])
+        right_haps = np.concatenate([l[1] for l in lines])
+        breakpoints = np.concatenate(
+            [lines[j][2] + offset_bp[j] for j in range(len(lines))]
+        )
+        linelist = [
+            f"{bp}:{hap0}{hap1}"
+            for bp, hap0, hap1 in zip(breakpoints, left_haps, right_haps)
+        ]
+        line = " ".join(linelist)
+        out_lines.append(line)
+
+    ## Write output
+    header = f"{nvar} {nsamp}"
+    with open(outfile, "w") as f:
+        f.write(header + "\n" + "\n".join(out_lines) + "\n")
+
+
 def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
     """Convert local ancestry files to .lanc format
 
@@ -219,14 +251,10 @@ def _get_geno(
 class FlatLanc:
     """Stores .lanc file ancestry data in a flattened structure for fast querying.
 
-    :param right_haps: Concatenated right haplotypes for all samples, shape (H,), dtype uint8.
-    :type right_haps: numpy.ndarray
-    :param left_haps: Concatenated left haplotypes for all samples, shape (H,), dtype uint8.
-    :type left_haps: numpy.ndarray
-    :param breakpoints: Concatenated breakpoints for all samples, shape (H,), dtype uint32.
-    :type breakpoints: numpy.ndarray
-    :param offsets: Cumulative end indices separating samples.
-    :type offsets: numpy.ndarray
+    right_haps: Concatenated right haplotypes for all samples, shape (H,), dtype uint8.
+    left_haps: Concatenated left haplotypes for all samples, shape (H,), dtype uint8.
+    breakpoints: Concatenated breakpoints for all samples, shape (H,), dtype uint32.
+    offsets: Cumulative end indices separating samples.
     """
 
     def __init__(
@@ -245,18 +273,14 @@ class FlatLanc:
 class LancData:
     """The genotype and local ancestry data for a single chromosome/dataset.
 
-    :param pgen: A pgenlib PgenReader object.
-    :type pgen: pgenlib.PgenReader
-    :param pvar: A pgenlib PVarReader object.
-    :type pvar: pgenlib.PvarReader
-    :param lanc: A FlatLanc object with local ancestry data.
-    :type lanc: FlatLanc
-    :param ancestries: An ordered list of ancestry names. The integer codes in
-        the .lanc file and `self.lanc` correspond to indices in this list (e.g.
-        0 -> ancestries[0]).
-    :type ancestries: list[str]
-    :param plink_prefix: The prefix for the corresponding plink2 fileset.
-    :type plink_prefix: str
+    Attributes:
+        pgen (PgenReader): A pgenlib PgenReader object.
+        pvar: A pgenlib PVarReader object.
+        lanc: A FlatLanc object with local ancestry data.
+        ancestries: An ordered list of ancestry names. The integer codes in
+            the .lanc file and `self.lanc` correspond to indices in this list (e.g.
+            0 -> ancestries[0]).
+        plink_prefix: The prefix for the corresponding plink2 fileset.
     """
 
     def __init__(
@@ -267,14 +291,10 @@ class LancData:
     ):
         """Constructs a LancData from plink2 files.
 
-        :param plink_prefix: A string with the prefix for a plink2 fileset.
-        :type plink_prefix: str
-        :param lanc_file: A string with the path to a .lanc file.
-        :type lanc_file: str
-        :param ancestries: An optional list of ordered ancestry names corresponding to the .lanc file.
-        :type ancestries: list[str]
-        :return: A LancData object
-        :rtype: LancData
+        Args:
+            plink_prefix: A string with the prefix for a plink2 fileset.
+            lanc_file: A string with the path to a .lanc file.
+            ancestries: An optional list of ordered ancestry names corresponding to the .lanc file.
         """
         pgen = PgenReader(bytes(plink_prefix + ".pgen", "utf8"))
         pvar = PvarReader(bytes(plink_prefix + ".pvar", "utf8"))
@@ -293,18 +313,17 @@ class LancData:
     def get_info(self, indices: NDArray[np.uint32]) -> DataFrame:
         """Query info for a set of variants.
 
-        :param indices: Array of variant indices in pvar order (0-based), shape
-            ``(V,)``, dtype ``int32``.
-        :type indices: numpy.ndarray
-        :return:
-            A pandas ``DataFrame`` with one row per variant and the following columns:
+        Args:
+            indices: Array of variant indices in pvar order (0-based), shape
+                ``(V,)``, dtype ``int32``.
 
+        Returns:
+            A pandas ``DataFrame`` with one row per variant and the following columns:
             - ``chrom`` (str): Chromosome name
             - ``pos`` (uint32): 1-based genomic position
             - ``ref`` (str): Reference allele
             - ``alt`` (str): Alternate allele
             - ``rsid`` (str): Variant identifier
-        :rtype: pandas.DataFrame
         """
 
         return _get_info(self.pvar, indices)

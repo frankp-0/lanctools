@@ -46,6 +46,19 @@ def show_version():
 
 
 @app.command()
+def merge(
+    file: str = typer.Option(
+        ..., help="Local ancestry files to be merged, comma-separated"
+    ),
+    outfile: str = typer.Option(..., help="Path of output Local ancestry file"),
+):
+    from . import merge_lanc
+
+    lancs = list_from_csv(file)
+    merge_lanc(lancs, outfile)
+
+
+@app.command()
 def convert_flare(
     file: str = typer.Option(..., help="Local ancestry file(s), comma-separated"),
     plink_prefix: str = typer.Option(
