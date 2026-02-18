@@ -251,10 +251,11 @@ def _get_geno(
 class FlatLanc:
     """Stores .lanc file ancestry data in a flattened structure for fast querying.
 
-    right_haps: Concatenated right haplotypes for all samples, shape (H,), dtype uint8.
-    left_haps: Concatenated left haplotypes for all samples, shape (H,), dtype uint8.
-    breakpoints: Concatenated breakpoints for all samples, shape (H,), dtype uint32.
-    offsets: Cumulative end indices separating samples.
+    Attributes:
+        right_haps (NDArray[uint8]): Concatenated right haplotypes for all samples, shape (H,)
+        left_haps (NDArray[uint8]): Concatenated left haplotypes for all samples, shape (H,)
+        breakpoints (NDArray[uint32]): Concatenated breakpoints for all samples, shape (H,)
+        offsets (NDArray[uint32]): Cumulative end indices separating samples, shape (N,)
     """
 
     def __init__(
@@ -275,12 +276,12 @@ class LancData:
 
     Attributes:
         pgen (PgenReader): A pgenlib PgenReader object.
-        pvar: A pgenlib PVarReader object.
-        lanc: A FlatLanc object with local ancestry data.
-        ancestries: An ordered list of ancestry names. The integer codes in
+        pvar (PvarReader): A pgenlib PVarReader object.
+        lanc (FlatLanc): A FlatLanc object with local ancestry data.
+        ancestries (list[str]): An ordered list of ancestry names. The integer codes in
             the .lanc file and `self.lanc` correspond to indices in this list (e.g.
             0 -> ancestries[0]).
-        plink_prefix: The prefix for the corresponding plink2 fileset.
+        plink_prefix (str): The prefix for the corresponding plink2 fileset.
     """
 
     def __init__(
@@ -292,9 +293,9 @@ class LancData:
         """Constructs a LancData from plink2 files.
 
         Args:
-            plink_prefix: A string with the prefix for a plink2 fileset.
-            lanc_file: A string with the path to a .lanc file.
-            ancestries: An optional list of ordered ancestry names corresponding to the .lanc file.
+            plink_prefix (str): The prefix for a plink2 fileset.
+            lanc_file (str): The path to a .lanc file.
+            ancestries (Optional[list[str]): An optional list of ordered ancestry names corresponding to the .lanc file.
         """
         pgen = PgenReader(bytes(plink_prefix + ".pgen", "utf8"))
         pvar = PvarReader(bytes(plink_prefix + ".pvar", "utf8"))
@@ -314,16 +315,16 @@ class LancData:
         """Query info for a set of variants.
 
         Args:
-            indices: Array of variant indices in pvar order (0-based), shape
-                ``(V,)``, dtype ``int32``.
+            indices: The variant indices in pvar order (0-based), shape (V,)
 
         Returns:
-            A pandas ``DataFrame`` with one row per variant and the following columns:
-            - ``chrom`` (str): Chromosome name
-            - ``pos`` (uint32): 1-based genomic position
-            - ``ref`` (str): Reference allele
-            - ``alt`` (str): Alternate allele
-            - ``rsid`` (str): Variant identifier
+            pandas.DataFrame: One row per variant with the following columns:
+
+                - chrom (str): Chromosome name. \n
+                - pos (int): 1-based genomic position. \n
+                - ref (str): Reference allele. \n
+                - alt (str): Alternate allele. \n
+                - rsid (str): Variant identifier. \n
         """
 
         return _get_info(self.pvar, indices)
@@ -331,11 +332,11 @@ class LancData:
     def get_lanc(self, indices: NDArray[np.unsignedinteger]) -> NDArray[np.uint8]:
         """Query phased local ancestry.
 
-        :param indices: Array of variant indices in pvar order (0-based), shape
-            ``(V,)``, dtype ``int32``.
-        :type indices: numpy.ndarray
-        :return: Local ancestries, shape ``(N, V, 2)``, dtype ``uint8``
-        :rtype: numpy.ndarray
+        Args:
+            indices: The variant indices in pvar order (0-based), shape (V,)
+
+        Returns:
+            An array of ancestries, shape (N, V, 2)
         """
 
         left, right = _get_lanc(
@@ -350,11 +351,12 @@ class LancData:
     def get_lanc_dosage(self, indices: NDArray[np.uint32]) -> NDArray[np.uint8]:
         """Query local ancestry dosage.
 
-        :param indices: Array of variant indices in pvar order (0-based), shape
-            ``(V,)``, dtype ``int32``.
-        :type indices: numpy.ndarray
-        :return: Local ancestry dosages, shape ``(N, V, len(self.ancestries))``, dtype ``uint8``.
-        :rtype: numpy.ndarray
+        Args:
+            indices: An array of variant indices in pvar order (0-based), shape (V,)
+
+        Returns:
+            An array of local ancestry dosages, shape (N, V, K) (where K is the
+                number of ancestries)
         """
 
         lanc = np.asarray(self.get_lanc(indices), dtype=np.uint8)
@@ -368,11 +370,11 @@ class LancData:
     def get_geno(self, indices: NDArray[np.uint32]) -> NDArray[np.int32]:
         """Query phased genotypes.
 
-        :param indices: Array of variant indices in pvar order (0-based), shape
-            ``(V,)``, dtype ``int32``.
-        :type indices: numpy.ndarray
-        :return: Phased genotypes, shape ``(N, V, 2)``, dtype ``int32``.
-        :rtype: numpy.ndarray
+        Args:
+            indices: An array of variant indices in pvar order (0-based), shape (V,)
+
+        Returns:
+            An array of phased genotypes, shape (N, V, 2)
         """
 
         return _get_geno(self.pgen, indices)
@@ -380,11 +382,11 @@ class LancData:
     def get_lanc_geno(self, indices: NDArray[np.unsignedinteger]) -> NDArray[np.int32]:
         """Query genotypes deconvoluted/masked by ancestry.
 
-        :param indices: Array of variant indices in pvar order (0-based), shape
-            ``(V,)``, dtype ``int32``.
-        :type indices: numpy.ndarray
-        :return: Genotypes masked by ancestry, shape ``(N, V, len(self.ancestries))``, dtype ``int32``.
-        :rtype: numpy.ndarray
+        Args:
+            indices: An array of variant indices in pvar order (0-based), shape (V,)
+
+        Returns:
+            An array of genotypes masked by ancestry, shape (N, V, 2)
         """
         geno = np.asarray(self.get_geno(indices), dtype=np.int32)
         lanc = np.asarray(self.get_lanc(indices), dtype=np.uint8)
