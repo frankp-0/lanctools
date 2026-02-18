@@ -6,10 +6,11 @@ build:
     python: latest
   jobs:
     install:
-      - pip install -r docs/requirements.txt
+      - pip install uv
+      - uv sync --extra docs
     build:
       html:
-        - zensical build
+        - uv run zensical build
     post_build:
       - mkdir -p $READTHEDOCS_OUTPUT/html/
       - cp --recursive site/* $READTHEDOCS_OUTPUT/html/
