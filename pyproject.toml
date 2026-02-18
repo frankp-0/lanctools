@@ -17,6 +17,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/frankp-0/lanctools"
+Documentation = "https://lanctools.readthedocs.io"
 Repository = "https://github.com/frankp-0/lanctools"
 Issues = "https://github.com/frankp-0/lanctools/issues"
 

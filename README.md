@@ -1,21 +1,23 @@
-# lanctools
+**lanctools** is a python package and command-line tool for working with phased local ancestry data stored in the `.lanc` file format, as defined by Admix-kit [Hou et al., 2024].
 
-Tools for working with phased local ancestry data stored in the `.lanc` file format, as defined by Admix-kit [Hou et al., 2024].
-
-`lanctools` is designed to provide **fast local ancestry queries** and convenient conversion from external formats (e.g., FLARE [Browning et al., 2023] and RFMix [Maples et al., 2013]). It focuses on efficient access to `.lanc` data and is **not** intended to replace the full functionality of Admix-kit.
-
-## Features
+`lanctools` is designed to provide **fast local ancestry queries** and convenient conversion from external formats (e.g., FLARE [Browning et al., 2023] and RFMix [Maples et al., 2013]). It focuses on efficient access to `.lanc` data and is **not** intended to replace the full functionality of Admix-kit. Features include:
 
 - Efficient random access to phased local ancestry data
 - Local ancestry-masked genotype queries
 - Conversion from FLARE and RFMix output to `.lanc` format
+- Merging `.lanc` files
 - Python API and command-line interface (CLI)
 
-## Installation
+Full documentation can be found [here](https://lanctools.readthedocs.io/en/latest/)
 
-```bash
-pip install lanctools
-```
+## Development Status
+
+This project is in early development and is only intended for academic use.
+
+Per semantic versioning conventions, anything may change at any time. The API
+should not be considered stable, and breaking changes may occur without notice.
+
+## License
 
 ## References
 
