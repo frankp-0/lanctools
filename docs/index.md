@@ -1,5 +1,5 @@
 ---
-icon: lucide/rocket
+icon: lucide/dna
 ---
 
 # lanctools
@@ -24,6 +24,9 @@ pip install lanctools
 ## Quickstart
 
 ### Querying Local Ancestry Data
+
+**lanctools** is primarily intending for performing fast queries of local
+ancestry and genotype data. Examples are provided below.
 
 ```python
 import numpy as np
@@ -50,6 +53,10 @@ lanc_geno = ld.get_lanc_geno(idx_var)
 
 ### Converting FLARE or RFMix Files to .lanc
 
+**lanctools** also provides c++ code for converting RFMix2 .msp.tsv or FLARE
+.vcf.gz files into the .lanc file format. This can be called with the
+python function `convert_to_lanc`.
+
 ```python
 from lanctools import convert_to_lanc
 
@@ -63,8 +70,18 @@ convert_to_lanc(
 
 ### Command-Line Interface
 
+For the file format conversion example above, a command-line utility is provided
+which accomplishes the same task.
+
 ```bash
 lanctools convert-flare --file chr1.anc.vcf.gz --plink_prefix chr1 --output chr1.lanc
+```
+
+**lanctools** also has a helpful CLI command for combining multiple `.lanc` files
+(e.g. across chromosomes) into a single `.lanc` file.
+
+```bash
+lanctools merge --file chr1.lanc,chr2.lanc,chr3.lanc --outfile chr1_3.lanc
 ```
 
 ## References
