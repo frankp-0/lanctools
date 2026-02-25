@@ -4,15 +4,11 @@
 
 import logging
 import typer
-from typing import Optional, List
+from typing import Optional
 from importlib.metadata import version, PackageNotFoundError
 
 app = typer.Typer(help="lanctools CLI")
 logger = logging.getLogger("lanctools")
-
-
-def list_from_csv(arg: str) -> List[str]:
-    return [x.strip() for x in arg.split(",")]
 
 
 def setup_logging(verbose: bool, quiet: bool) -> None:
@@ -47,57 +43,52 @@ def show_version():
 
 @app.command()
 def merge(
-    file: str = typer.Option(
-        ..., help="Local ancestry files to be merged, comma-separated"
+    input: Optional[list[str]] = typer.Option(
+        None,
+        help=(
+            "Local ancestry files to be merged. "
+            "This option should be repeated to specify multiple files. "
+            "Example: --input chr1.lanc --input chr2.lanc"
+        ),
     ),
-    outfile: str = typer.Option(..., help="Path of output Local ancestry file"),
+    input_list: Optional[str] = typer.Option(
+        None,
+        help=(
+            "File containing paths to local ancestry files to be merged, one per line"
+        ),
+    ),
+    output: str = typer.Option(..., help="Path of output Local ancestry file"),
 ):
     from . import merge_lanc
 
-    lancs = list_from_csv(file)
-    merge_lanc(lancs, outfile)
+    if input and input_list:
+        raise typer.BadParameter("Specify either input OR input_list, not both.")
+
+    lancs: list[str]
+    if input is None:
+        if input_list is None:
+            raise typer.BadParameter("Specify one of either input or input_list.")
+        with open(input_list) as f:
+            lancs = [line.strip() for line in f if line.strip()]
+    else:
+        lancs = input
+
+    merge_lanc(lancs, output)
 
 
 @app.command()
-def convert_flare(
-    file: str = typer.Option(..., help="Local ancestry file(s), comma-separated"),
-    plink_prefix: str = typer.Option(
-        ..., help="Plink2 file prefix(es), comma-separated"
-    ),
+def convert(
+    input: str = typer.Option(..., help="Local ancestry file"),
+    plink: str = typer.Option(..., help="Plink2 file prefix"),
+    format: str = typer.Option(..., help="File format (either 'RFMix' or 'FLARE'"),
     output: str = typer.Option(
         ...,
-        help="Output prefix(es), comma-separated, one per plink_prefix",
+        help="Output prefix",
     ),
 ):
     from . import convert_to_lanc
 
-    plinks = list_from_csv(plink_prefix)
-    inputs = list_from_csv(file)
-    outputs = list_from_csv(output)
-
-    for plink, input, out in zip(plinks, inputs, outputs):
-        convert_to_lanc(file=input, file_fmt="FLARE", plink_prefix=plink, output=out)
-
-
-@app.command()
-def convert_rfmix(
-    file: str = typer.Option(..., help="Local ancestry file(s), comma-separated"),
-    plink_prefix: str = typer.Option(
-        ..., help="Plink2 file prefix(es), comma-separated"
-    ),
-    outputs: str = typer.Option(
-        ...,
-        help="Output prefix(es), comma-separated, one per plink_prefix",
-    ),
-):
-    from . import convert_to_lanc
-
-    plinks = list_from_csv(plink_prefix)
-    inputs = list_from_csv(file)
-    output = list_from_csv(outputs)
-
-    for plink, input, out in zip(plinks, inputs, output):
-        convert_to_lanc(file=input, file_fmt="RFMix", plink_prefix=plink, output=out)
+    convert_to_lanc(file=input, file_fmt=format, plink_prefix=plink, output=output)
 
 
 def main_entry():
