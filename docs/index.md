@@ -74,14 +74,14 @@ For the file format conversion example above, a command-line utility is provided
 which accomplishes the same task.
 
 ```bash
-lanctools convert-flare --file chr1.anc.vcf.gz --plink_prefix chr1 --output chr1.lanc
+lanctools convert --input chr1.anc.vcf.gz --plink chr1 --format FLARE --output chr1.lanc
 ```
 
 **lanctools** also has a helpful CLI command for combining multiple `.lanc` files
 (e.g. across chromosomes) into a single `.lanc` file.
 
 ```bash
-lanctools merge --file chr1.lanc,chr2.lanc,chr3.lanc --outfile chr1_3.lanc
+lanctools merge --input chr1.lanc --input chr2.lanc --input chr3.lanc --output chr1_3.lanc
 ```
 
 ## References

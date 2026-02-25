@@ -611,11 +611,11 @@ python function <code>convert_to_lanc</code>.</p>
 <h3 id="command-line-interface">Command-Line Interface</h3>
 <p>For the file format conversion example above, a command-line utility is provided
 which accomplishes the same task.</p>
-<div class="highlight"><pre><span></span><code>lanctools<span class="w"> </span>convert-flare<span class="w"> </span>--file<span class="w"> </span>chr1.anc.vcf.gz<span class="w"> </span>--plink_prefix<span class="w"> </span>chr1<span class="w"> </span>--output<span class="w"> </span>chr1.lanc
+<div class="highlight"><pre><span></span><code>lanctools<span class="w"> </span>convert<span class="w"> </span>--input<span class="w"> </span>chr1.anc.vcf.gz<span class="w"> </span>--plink<span class="w"> </span>chr1<span class="w"> </span>--format<span class="w"> </span>FLARE<span class="w"> </span>--output<span class="w"> </span>chr1.lanc
 </code></pre></div>
 <p><strong>lanctools</strong> also has a helpful CLI command for combining multiple <code>.lanc</code> files
 (e.g. across chromosomes) into a single <code>.lanc</code> file.</p>
-<div class="highlight"><pre><span></span><code>lanctools<span class="w"> </span>merge<span class="w"> </span>--file<span class="w"> </span>chr1.lanc,chr2.lanc,chr3.lanc<span class="w"> </span>--outfile<span class="w"> </span>chr1_3.lanc
+<div class="highlight"><pre><span></span><code>lanctools<span class="w"> </span>merge<span class="w"> </span>--input<span class="w"> </span>chr1.lanc<span class="w"> </span>--input<span class="w"> </span>chr2.lanc<span class="w"> </span>--input<span class="w"> </span>chr3.lanc<span class="w"> </span>--output<span class="w"> </span>chr1_3.lanc
 </code></pre></div>
 <h2 id="references">References</h2>
 <ul>
