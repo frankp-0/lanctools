@@ -65,7 +65,7 @@ def test_get_info(chr20_data):
     df_info = chr20_data.get_info(np.arange(nvar))
     df_true = pd.read_json(
         "tests/data/chr20_info.json",
-        dtype={"chrom": str, "pos": np.uint32, "ref": str, "alt": str, "rsid": str},
+        dtype={"CHR": str, "BP": np.uint32, "REF": str, "ALT": str, "ID": str},
     )
     pd.testing.assert_frame_equal(df_info, df_true)
 

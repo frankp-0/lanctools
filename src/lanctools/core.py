@@ -66,8 +66,8 @@ def _get_info(pvar: PvarReader, indices: NDArray[np.unsignedinteger]) -> DataFra
     ref = [pvar.get_allele_code(i, 0).decode("utf8") for i in indices]
     alt = [pvar.get_allele_code(i, 1).decode("utf8") for i in indices]
     id = [pvar.get_variant_id(i).decode("utf8") for i in indices]
-    df = DataFrame({"chrom": chrom, "pos": pos, "ref": ref, "alt": alt, "id": id})
-    df["pos"] = df["pos"].astype("uint32")
+    df = DataFrame({"CHR": chrom, "BP": pos, "REF": ref, "ALT": alt, "ID": id})
+    df["BP"] = df["BP"].astype("uint32")
     return df
 
 
@@ -154,8 +154,8 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
     df = df.sort_values(by=["sample", "chrom", "spos"]).reset_index(drop=True)
 
     ## Exclude tracts starting after or ending before pgen range
-    min_pvar = np.min(df_pvar["pos"])
-    max_pvar = np.max(df_pvar["pos"])
+    min_pvar = np.min(df_pvar["BP"])
+    max_pvar = np.max(df_pvar["BP"])
     tracts_mask = (df["spos"] < max_pvar) & (df["epos"] > min_pvar)
     df = df[tracts_mask]
 
@@ -164,7 +164,7 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
     df["spos"] = df["spos"].clip(lower=min_pvar)
 
     ## Get index of first pvar pos >= tract epos
-    df["idx"] = np.searchsorted(df_pvar["pos"].values, df["epos"].values, side="right")
+    df["idx"] = np.searchsorted(df_pvar["BP"].values, df["epos"].values, side="right")
 
     ## If multiple tracts have same idx, pick last one
     df = (
@@ -320,11 +320,11 @@ class LancData:
         Returns:
             pandas.DataFrame: One row per variant with the following columns:
 
-                - chrom (str): Chromosome name. \n
-                - pos (int): 1-based genomic position. \n
-                - ref (str): Reference allele. \n
-                - alt (str): Alternate allele. \n
-                - rsid (str): Variant identifier. \n
+                - CHR (str): Chromosome name. \n
+                - BP (int): 1-based genomic position. \n
+                - REF (str): Reference allele. \n
+                - ALT (str): Alternate allele. \n
+                - ID (str): Variant identifier. \n
         """
 
         return _get_info(self.pvar, indices)
