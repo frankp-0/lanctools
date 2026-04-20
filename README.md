@@ -8,7 +8,7 @@
 - Merging `.lanc` files
 - Python API and command-line interface (CLI)
 
-Full documentation can be found [here](https://lanctools.readthedocs.io/en/latest/)
+Full documentation can be found [here](https://frankp-0.github.io/lanctools/)
 
 ## Development Status
 
