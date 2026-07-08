@@ -222,10 +222,6 @@ def _get_lanc(
     left_out = np.empty((n_samples, n_variants), dtype=np.uint8)
     right_out = np.empty((n_samples, n_variants), dtype=np.uint8)
 
-    for i in range(1, n_variants):
-        if indices[i] < indices[i - 1]:
-            raise ValueError("indices must be sorted ascending")
-
     for i in nb.prange(n_samples):
         start = offsets[i]
         end = offsets[i + 1]
@@ -281,6 +277,28 @@ class FlatLanc:
         self.right_haps = right_haps
         self.breakpoints = breakpoints
         self.offsets = offsets
+
+    def get_lanc(self, indices: NDArray[np.unsignedinteger]) -> NDArray[np.uint8]:
+        """Query phased local ancestry.
+
+        Args:
+            indices: The variant indices in (0-based)
+
+        Returns:
+            An array of ancestries, shape (N, V, 2)
+        """
+
+        idx_order = np.argsort(indices)
+        idx_ordered = np.ascontiguousarray(indices[idx_order])
+        idx_inverse = np.argsort(idx_order)
+        left, right = _get_lanc(
+            self.left_haps,
+            self.right_haps,
+            self.breakpoints,
+            self.offsets,
+            idx_ordered,
+        )
+        return np.stack((left[:, idx_inverse], right[:, idx_inverse]), axis=-1)
 
 
 class LancData:
@@ -351,14 +369,7 @@ class LancData:
             An array of ancestries, shape (N, V, 2)
         """
 
-        left, right = _get_lanc(
-            self.lanc.left_haps,
-            self.lanc.right_haps,
-            self.lanc.breakpoints,
-            self.lanc.offsets,
-            indices,
-        )
-        return np.stack((left, right), axis=-1)
+        return self.lanc.get_lanc(indices)
 
     def get_lanc_dosage(self, indices: NDArray[np.uint32]) -> NDArray[np.uint8]:
         """Query local ancestry dosage.
@@ -383,7 +394,7 @@ class LancData:
         """Query phased genotypes.
 
         Args:
-            indices: An array of variant indices in pvar order (0-based), shape (V,)
+            indices: An array of variant indices (0-based)
 
         Returns:
             An array of phased genotypes, shape (N, V, 2)
@@ -395,13 +406,13 @@ class LancData:
         """Query genotypes deconvoluted/masked by ancestry.
 
         Args:
-            indices: An array of variant indices in pvar order (0-based), shape (V,)
+            indices: An array of variant indices (0-based)
 
         Returns:
             An array of genotypes masked by ancestry, shape (N, V, 2)
         """
         geno = np.asarray(self.get_geno(indices), dtype=np.int32)
-        lanc = np.asarray(self.get_lanc(indices), dtype=np.uint8)
+        lanc = np.asarray(self.lanc.get_lanc(indices), dtype=np.uint8)
         ancestries = np.arange(len(self.ancestries), dtype=np.uint8)
         left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.int32)
         right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(
