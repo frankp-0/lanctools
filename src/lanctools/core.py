@@ -208,7 +208,7 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
         f.write(header + "\n" + "\n".join(lines.astype(str)) + "\n")
 
 
-@nb.njit(parallel=True)
+@nb.njit(parallel=True, cache=True)
 def _get_lanc(
     left_haps: NDArray[np.uint8],
     right_haps: NDArray[np.uint8],
