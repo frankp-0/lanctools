@@ -217,12 +217,12 @@ def _get_lanc(
     indices: NDArray[np.unsignedinteger],
 ) -> tuple[NDArray[np.uint8], NDArray[np.uint8]]:
     """Query local ancestry"""
-    n_samples = len(offsets) - 1
-    n_variants = len(indices)
+    n_samples = offsets.shape[0] - 1
+    n_variants = indices.shape[0]
     left_out = np.empty((n_samples, n_variants), dtype=np.uint8)
     right_out = np.empty((n_samples, n_variants), dtype=np.uint8)
 
-    for i in range(1, len(indices)):
+    for i in range(1, n_variants):
         if indices[i] < indices[i - 1]:
             raise ValueError("indices must be sorted ascending")
 
@@ -234,7 +234,7 @@ def _get_lanc(
         right_i = right_haps[start:end]
 
         j = 0
-        end_len = len(end_i)
+        end_len = end_i.shape[0]
         for q in range(n_variants):
             idx = indices[q]
             while j < end_len and idx >= end_i[j]:
