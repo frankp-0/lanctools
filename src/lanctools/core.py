@@ -2,6 +2,18 @@
 # Copyright (c) 2025 Franklin Ockerman
 # See LICENSE file for full license text
 
+"""Core module for lanctools.
+
+This module provides:
+
+- Conversion from other local ancestry formats to .lanc with `convert_to_lanc`
+- Merging multiple .lanc  files with `merge_lanc`
+- The `FlatLanc` class, which represents local ancestry data in a flattened
+  structure for fast querying using `_get_lanc`
+- The `LancData` class, which provides an interface for querying local
+  ancestry, genotypes, and ancestry-deconvoluted genotypes
+"""
+
 from __future__ import annotations
 from pathlib import Path
 from pgenlib import PgenReader, PvarReader

@@ -2,6 +2,8 @@
 # Copyright (c) 2025 Franklin Ockerman
 # See LICENSE file for full license text
 
+"""The command line interface for lanctools."""
+
 import logging
 import typer
 from typing import Optional
