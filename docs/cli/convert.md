@@ -1,48 +1,4 @@
-# lanctools CLI
-
-`lanctools` provides a command-line interface with two utilities for file
-conversions.
-
----
-
-## Basic Usage
-
-To get help, use the `--help` flag:
-
-```bash
-lanctools --help
-lanctools merge --help
-```
-
----
-
-## merge
-
-The `merge` command is used to combine a list of `.lanc` files into a single
-`.lanc` file.
-
-### Example
-
-```bash
-lanctools merge --input chr1.lanc --input chr2.lanc --input chr3.lanc --output chr1_3.lanc
-```
-
-### Arguments
-
-| Option      | Argument | Type | Description |
-| --- | --- | --- | --- |
-| `--input` | TEXT | optional | A local ancestry .lanc file to be merged. This option should be repeated to specify multiple files. |
-| `--input-list` | TEXT | optional | File containing local ancestry .lanc files to be merged, one per line |
-| `--output` | TEXT | required | The output .lanc file |
-
-
-!!! warning
-    
-    Either `--input` or `--input-list` may be provided, not both.
-
----
-
-## convert
+# File Conversions
 
 The `convert` command is used to convert output from a local ancestry
 inference tool into the `.lanc` format. Currently supported formats
@@ -56,7 +12,6 @@ lanctools convert --input chr1.anc.vcf.gz --plink chr1 --format FLARE --output c
 
 ### Arguments
 
-
 | Option      | Argument | Type | Description |
 | --- | --- | --- | --- |
 | `--input` | TEXT | required | The input local ancestry file |
@@ -64,6 +19,9 @@ lanctools convert --input chr1.anc.vcf.gz --plink chr1 --format FLARE --output c
 | `--format` | TEXT | required | The input file format ("RFMix" or "FLARE") |
 | `--output` | TEXT | required | The output .lanc file |
 
+!!! note
+
+    For `--format RFMix`, the `--input` file should be RFMix's `.msp.tsv` output file, which contains the most likely assignment of subpopulations per CRF point. For `--format FLARE`, the `--input` file should be the `.anc.vcf.gz` file output by FLARE.
 
 !!! info
 
