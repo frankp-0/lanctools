@@ -141,6 +141,8 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
 
     ## Variant plink info
     df_pvar = _get_info(pvar, np.arange(n_variants))  # variant info
+    chr_order = df_pvar["CHR"].unique()
+    df["chrom"] = pd.Categorical(df["chrom"], categories=chr_order, ordered=True)
 
     ## Sample plink info
     n_skip = 0
@@ -197,7 +199,7 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
         .str.cat(df["anc1"].astype(str))
     )
     lines = (
-        df.groupby(["sample", "chrom"], observed=True)["switch"]
+        df.groupby(["sample"], observed=True)["switch"]
         .apply(lambda x: " ".join(x.astype(str)))
         .reset_index(drop=True)
     )
