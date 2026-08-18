@@ -1,3 +1,4 @@
+#include <iostream>
 #include "flare.hpp"
 #include <cstdint>
 #include <pybind11/stl.h>
@@ -159,6 +160,7 @@ py::dict read_flare(const std::string &flare_file) {
   std::string cur_chrom = "chr0";
   bool is_first_record = true;
 
+  size_t variant_count = 0;
   while (!(line = gz_readline(file)).empty()) {
     if (line.empty() || line[0] == '#')
       continue;
@@ -166,6 +168,12 @@ py::dict read_flare(const std::string &flare_file) {
     std::vector<std::string> fields = split(line, '\t');
     if (fields.size() < format_idx + 1 + n_samples)
       continue;
+
+    ++variant_count;
+
+    if (variant_count % 10000 == 0) {
+      std::cerr << "Processed " << variant_count << " variants in VCF\n";
+    }
 
     std::string chrom = fields[chrom_idx];
     uint32_t pos = std::stoul(fields[pos_idx]);
