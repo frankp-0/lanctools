@@ -197,13 +197,27 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
     else:
         raise ValueError("Please specify either `FLARE` or `RFMix` input")
 
+    required_columns = {"sample", "chrom", "spos", "epos", "anc0", "anc1"}
+    missing_columns = required_columns.difference(df.columns)
+    if missing_columns:
+        missing = ", ".join(sorted(missing_columns))
+        raise ValueError(f"Local ancestry input is missing columns: {missing}")
+    if df.empty:
+        raise ValueError("Local ancestry input contains no ancestry tracts")
+
     ## Read plink files
     pvar = PvarReader(bytes(plink_prefix + ".pvar", "utf8"))
     n_variants = pvar.get_variant_ct()
+    if n_variants == 0:
+        raise ValueError("PLINK input contains no variants")
 
     ## Variant plink info
     df_pvar = _get_info(pvar, np.arange(n_variants))  # variant info
     chr_order = df_pvar["CHR"].unique()
+    unknown_chromosomes = set(df["chrom"]) - set(chr_order)
+    if unknown_chromosomes:
+        unknown = ", ".join(sorted(str(chrom) for chrom in unknown_chromosomes))
+        raise ValueError(f"Local ancestry input contains unknown chromosomes: {unknown}")
     df["chrom"] = pd.Categorical(df["chrom"], categories=chr_order, ordered=True)
 
     ## Sample plink info
@@ -215,11 +229,23 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
             n_skip += 1
 
     df_psam = pd.read_csv(plink_prefix + ".psam", sep="\\s+", skiprows=n_skip, dtype=str)
+    if "#IID" not in df_psam:
+        raise ValueError("PLINK .psam input must contain a #IID column")
+    if df_psam["#IID"].duplicated().any():
+        raise ValueError("PLINK .psam input contains duplicate sample IDs")
     samples = df_psam["#IID"]
 
-    all_samples_exist = bool(samples.isin(df["sample"]).all())
-    if not all_samples_exist:
-        raise ValueError("Not all pgen samples exist in local ancestry input")
+    input_samples = set(df["sample"])
+    plink_samples = set(samples)
+    missing_samples = plink_samples - input_samples
+    extra_samples = input_samples - plink_samples
+    if missing_samples or extra_samples:
+        details = []
+        if missing_samples:
+            details.append(f"missing {sorted(missing_samples)}")
+        if extra_samples:
+            details.append(f"unexpected {sorted(extra_samples)}")
+        raise ValueError("PLINK and local ancestry samples differ: " + "; ".join(details))
 
     ## Filter input to ordered plink samples
     df = df[df["sample"].isin(samples)].copy()
@@ -233,6 +259,8 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
     max_pvar = int(np.max(df_pvar["BP"]))
     tracts_mask = (df["spos"] < max_pvar) & (df["epos"] > min_pvar)
     df = df[tracts_mask]
+    if df.empty:
+        raise ValueError("No ancestry tracts overlap the PLINK variant range")
 
     ## Clip tracts positions to pgen start, end
     df.loc[df["epos"] > max_pvar, "epos"] = max_pvar

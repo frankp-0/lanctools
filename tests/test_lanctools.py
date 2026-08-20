@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from lanctools import LancData, convert_to_lanc, merge_lanc
+from lanctools import LancData, convert_to_lanc, core, merge_lanc
 from lanctools.core import _parse_lanc_line, _read_lanc
 
 
@@ -74,6 +74,61 @@ def test_convert_flare(tmp_path):
         open(tmp_lanc_path, encoding="utf-8") as test_lanc,
     ):
         assert true_lanc.read() == test_lanc.read()
+
+
+def test_convert_rejects_missing_parser_columns(monkeypatch):
+    monkeypatch.setattr(core, "read_flare", lambda _: {})
+
+    with pytest.raises(ValueError, match="missing columns"):
+        convert_to_lanc(
+            file="input.vcf.gz",
+            file_fmt="FLARE",
+            plink_prefix="tests/data/chr20",
+            output="output.lanc",
+        )
+
+
+def test_convert_rejects_empty_parser_output(monkeypatch):
+    columns = ["sample", "chrom", "spos", "epos", "anc0", "anc1"]
+    monkeypatch.setattr(core, "read_flare", lambda _: {column: [] for column in columns})
+
+    with pytest.raises(ValueError, match="no ancestry tracts"):
+        convert_to_lanc(
+            file="input.vcf.gz",
+            file_fmt="FLARE",
+            plink_prefix="tests/data/chr20",
+            output="output.lanc",
+        )
+
+
+def test_convert_rejects_unknown_chromosome(monkeypatch):
+    original_read_flare = core.read_flare
+    flare_data = original_read_flare("tests/data/chr20.flare.anc.vcf.gz")
+    flare_data["chrom"] = ["unknown"] * len(flare_data["chrom"])
+    monkeypatch.setattr(core, "read_flare", lambda _: flare_data)
+
+    with pytest.raises(ValueError, match="unknown chromosomes"):
+        convert_to_lanc(
+            file="input.vcf.gz",
+            file_fmt="FLARE",
+            plink_prefix="tests/data/chr20",
+            output="output.lanc",
+        )
+
+
+def test_convert_rejects_sample_mismatch(monkeypatch):
+    original_read_flare = core.read_flare
+    flare_data = original_read_flare("tests/data/chr20.flare.anc.vcf.gz")
+    flare_data["sample"] = ["unexpected"] * len(flare_data["sample"])
+    monkeypatch.setattr(core, "read_flare", lambda _: flare_data)
+
+    with pytest.raises(ValueError, match="samples differ"):
+        convert_to_lanc(
+            file="input.vcf.gz",
+            file_fmt="FLARE",
+            plink_prefix="tests/data/chr20",
+            output="output.lanc",
+        )
 
 
 def test_get_info(chr20_data):
