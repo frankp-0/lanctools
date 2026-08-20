@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from lanctools import LancData, convert_to_lanc
+from lanctools import LancData, convert_to_lanc, merge_lanc
 from lanctools.core import _parse_lanc_line, _read_lanc
 
 
@@ -42,6 +42,24 @@ def test_read_lanc(tmp_path):
     np.testing.assert_array_equal(lanc.right_haps, [1, 2, 3, 0, 1])
 
 
+def test_parse_lanc_rejects_invalid_tract():
+    with pytest.raises(ValueError, match="Breakpoints"):
+        _parse_lanc_line("10:01 9:12")
+
+
+def test_read_lanc_rejects_wrong_sample_count(tmp_path):
+    path = tmp_path / "invalid.lanc"
+    path.write_text("6 2\n6:00\n")
+
+    with pytest.raises(ValueError, match="declares 2 samples"):
+        _read_lanc(path)
+
+
+def test_merge_lanc_rejects_empty_input(tmp_path):
+    with pytest.raises(ValueError, match="At least one"):
+        merge_lanc([], tmp_path / "output.lanc")
+
+
 def test_convert_flare(tmp_path):
     tmp_lanc_path = tmp_path / "test_flare.lanc"
     convert_to_lanc(
@@ -68,7 +86,6 @@ def test_get_info(chr20_data):
     pd.testing.assert_frame_equal(df_info, df_true)
 
 
-# TODO: test out of bounds indices
 def test_get_lanc(chr20_data):
     lanc_arr = chr20_data.get_lanc(np.arange(10, 14, dtype=np.uint32))
     lanc_true = np.asarray(
@@ -98,6 +115,11 @@ def test_get_lanc(chr20_data):
     )
 
     np.testing.assert_equal(lanc_arr, lanc_true)
+
+
+def test_get_lanc_rejects_out_of_bounds_indices(chr20_data):
+    with pytest.raises(IndexError, match="outside"):
+        chr20_data.get_lanc(np.array([40], dtype=np.uint32))
 
 
 def test_get_lanc_dosage(chr20_data):
