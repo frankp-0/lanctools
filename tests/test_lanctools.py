@@ -1,8 +1,8 @@
-import pytest
 import numpy as np
 import pandas as pd
-from lanctools import LancData
-from lanctools import convert_to_lanc
+import pytest
+
+from lanctools import LancData, convert_to_lanc
 from lanctools.core import _parse_lanc_line, _read_lanc
 
 
@@ -54,8 +54,8 @@ def test_convert_flare(tmp_path):
     )
 
     with (
-        open("tests/data/chr20.lanc", "r", encoding="utf-8") as true_lanc,
-        open(tmp_lanc_path, "r", encoding="utf-8") as test_lanc,
+        open("tests/data/chr20.lanc", encoding="utf-8") as true_lanc,
+        open(tmp_lanc_path, encoding="utf-8") as test_lanc,
     ):
         assert true_lanc.read() == test_lanc.read()
 

@@ -1,3 +1,3 @@
-from .core import LancData, FlatLanc, convert_to_lanc, merge_lanc
+from .core import FlatLanc, LancData, convert_to_lanc, merge_lanc
 
-__all__ = ["LancData", "FlatLanc", "convert_to_lanc", "merge_lanc"]
+__all__ = ["FlatLanc", "LancData", "convert_to_lanc", "merge_lanc"]

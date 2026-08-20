@@ -5,9 +5,9 @@
 """The command line interface for lanctools."""
 
 import logging
+from importlib.metadata import PackageNotFoundError, version
+
 import typer
-from typing import Optional
-from importlib.metadata import version, PackageNotFoundError
 
 app = typer.Typer(help="lanctools CLI")
 logger = logging.getLogger("lanctools")
@@ -45,7 +45,7 @@ def show_version():
 
 @app.command()
 def merge(
-    input: Optional[list[str]] = typer.Option(
+    input: list[str] | None = typer.Option(
         None,
         help=(
             "Local ancestry files to be merged. "
@@ -53,11 +53,9 @@ def merge(
             "Example: --input chr1.lanc --input chr2.lanc"
         ),
     ),
-    input_list: Optional[str] = typer.Option(
+    input_list: str | None = typer.Option(
         None,
-        help=(
-            "File containing paths to local ancestry files to be merged, one per line"
-        ),
+        help=("File containing paths to local ancestry files to be merged, one per line"),
     ),
     output: str = typer.Option(..., help="Path of output Local ancestry file"),
 ):
@@ -99,7 +97,7 @@ def main_entry():
     except Exception as exc:
         logger.debug("Unhandled exception", exc_info=True)
         typer.secho(f"Error: {exc}", fg=typer.colors.RED)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from exc
 
 
 if __name__ == "__main__":

@@ -15,16 +15,17 @@ This module provides:
 """
 
 from __future__ import annotations
-from pathlib import Path
-from pgenlib import PgenReader, PvarReader
-import numpy as np
-from numpy.typing import NDArray
-import numba as nb
-import pandas as pd
-from pandas import DataFrame
-from typing import Optional
-from ._cpp import read_rfmix, read_flare
 
+from pathlib import Path
+
+import numba as nb
+import numpy as np
+import pandas as pd
+from numpy.typing import NDArray
+from pandas import DataFrame
+from pgenlib import PgenReader, PvarReader
+
+from ._cpp import read_flare, read_rfmix
 
 ### ─────────────────────────────────────────────────────────────
 ### Functions
@@ -52,7 +53,7 @@ def _parse_lanc_line(
 def _read_lanc(path: str | Path) -> FlatLanc:
     """Read a .lanc file into a FlatLanc object"""
     left_haps, right_haps, breakpoints, offsets = [], [], [], [0]
-    with open(path, "r") as f:
+    with open(path) as f:
         next(f)
         for line in f:
             left_hap, right_hap, end = _parse_lanc_line(line)
@@ -84,27 +85,25 @@ def _get_info(pvar: PvarReader, indices: NDArray[np.unsignedinteger]) -> DataFra
 
 
 def merge_lanc(files: list[str], outfile: str):
-    fs = [open(f, "r") for f in files]
+    fs = [open(f) for f in files]
     line1s = [next(f).strip().split() for f in fs]
-    nvars = [int(l[0]) for l in line1s]
+    nvars = [int(line[0]) for line in line1s]
     offset_bp = np.cumsum(nvars)[:-1]
     offset_bp = np.insert(offset_bp, 0, 0)
-    nsamps = [int(l[1]) for l in line1s]
+    nsamps = [int(line[1]) for line in line1s]
     if len(set(nsamps)) > 1:
         raise ValueError("Files have different numbers of samples")
     nsamp = int(nsamps[0])
     nvar = sum(nvars)
     out_lines = []
-    for i in range(nsamp):
+    for _ in range(nsamp):
         lines = [_parse_lanc_line(next(f)) for f in fs]
-        left_haps = np.concatenate([l[0] for l in lines])
-        right_haps = np.concatenate([l[1] for l in lines])
-        breakpoints = np.concatenate(
-            [lines[j][2] + offset_bp[j] for j in range(len(lines))]
-        )
+        left_haps = np.concatenate([line[0] for line in lines])
+        right_haps = np.concatenate([line[1] for line in lines])
+        breakpoints = np.concatenate([lines[j][2] + offset_bp[j] for j in range(len(lines))])
         linelist = [
             f"{bp}:{hap0}{hap1}"
-            for bp, hap0, hap1 in zip(breakpoints, left_haps, right_haps)
+            for bp, hap0, hap1 in zip(breakpoints, left_haps, right_haps, strict=True)
         ]
         line = " ".join(linelist)
         out_lines.append(line)
@@ -152,12 +151,11 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
                 break
             n_skip += 1
 
-    df_psam = pd.read_csv(
-        plink_prefix + ".psam", sep="\\s+", skiprows=n_skip, dtype=str
-    )
+    df_psam = pd.read_csv(plink_prefix + ".psam", sep="\\s+", skiprows=n_skip, dtype=str)
     samples = df_psam["#IID"]
 
-    if not samples.isin(df["sample"]).all():
+    all_samples_exist = bool(samples.isin(df["sample"]).all())
+    if not all_samples_exist:
         raise ValueError("Not all pgen samples exist in local ancestry input")
 
     ## Filter input to ordered plink samples
@@ -165,24 +163,28 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
 
     ## Sort df by sample, chrom, spos
     df["sample"] = pd.Categorical(df["sample"], categories=samples, ordered=True)
-    df = df.sort_values(by=["sample", "chrom", "spos"]).reset_index(drop=True)
+    df = df.sort_values(by=["sample", "chrom", "spos"]).reset_index(drop=True)  # pyright: ignore[reportCallIssue]
 
     ## Exclude tracts starting after or ending before pgen range
-    min_pvar = np.min(df_pvar["BP"])
-    max_pvar = np.max(df_pvar["BP"])
+    min_pvar = int(np.min(df_pvar["BP"]))
+    max_pvar = int(np.max(df_pvar["BP"]))
     tracts_mask = (df["spos"] < max_pvar) & (df["epos"] > min_pvar)
     df = df[tracts_mask]
 
     ## Clip tracts positions to pgen start, end
-    df["epos"] = df["epos"].clip(upper=max_pvar)
-    df["spos"] = df["spos"].clip(lower=min_pvar)
+    df.loc[df["epos"] > max_pvar, "epos"] = max_pvar
+    df.loc[df["spos"] < min_pvar, "spos"] = min_pvar
 
     ## Get index of first pvar pos >= tract epos
-    df["idx"] = np.searchsorted(df_pvar["BP"].values, df["epos"].values, side="right")
+    df["idx"] = np.searchsorted(
+        np.asarray(df_pvar["BP"], dtype=int),
+        np.asarray(df["epos"], dtype=int),
+        side="right",
+    )
 
     ## If multiple tracts have same idx, pick last one
     df = (
-        df.sort_values(["sample", "chrom", "idx"])
+        df.sort_values(["sample", "chrom", "idx"])  # pyright: ignore[reportCallIssue]
         .groupby(["sample", "chrom", "idx"], as_index=False, observed=True)
         .tail(1)  # last row per group
     )
@@ -242,9 +244,7 @@ def _get_lanc(
     return left_out, right_out
 
 
-def _get_geno(
-    pgen: PgenReader, indices: NDArray[np.unsignedinteger]
-) -> NDArray[np.int32]:
+def _get_geno(pgen: PgenReader, indices: NDArray[np.unsignedinteger]) -> NDArray[np.int32]:
     """Query genotypes"""
     n = pgen.get_raw_sample_ct()
     v = len(indices)
@@ -320,14 +320,15 @@ class LancData:
         self,
         plink_prefix: str,
         lanc_file: str,
-        ancestries: Optional[list[str]] = None,
+        ancestries: list[str] | None = None,
     ):
         """Constructs a LancData from plink2 files.
 
         Args:
             plink_prefix (str): The prefix for a plink2 fileset.
             lanc_file (str): The path to a .lanc file.
-            ancestries (Optional[list[str]): An optional list of ordered ancestry names corresponding to the .lanc file.
+            ancestries (Optional[list[str]): An optional list of ordered ancestry
+                names corresponding to the .lanc file.
         """
         pgen = PgenReader(bytes(plink_prefix + ".pgen", "utf8"))
         pvar = PvarReader(bytes(plink_prefix + ".pvar", "utf8"))
@@ -387,9 +388,7 @@ class LancData:
         lanc = np.asarray(self.get_lanc(indices), dtype=np.uint8)
         ancestries = np.arange(len(self.ancestries), dtype=np.uint8)
         left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.int32)
-        right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(
-            np.int32
-        )
+        right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(np.int32)
         return left_haps_mask + right_haps_mask
 
     def get_geno(self, indices: NDArray[np.uint32]) -> NDArray[np.int32]:
@@ -417,10 +416,6 @@ class LancData:
         lanc = np.asarray(self.lanc.get_lanc(indices), dtype=np.uint8)
         ancestries = np.arange(len(self.ancestries), dtype=np.uint8)
         left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.int32)
-        right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(
-            np.int32
-        )
-        geno_masked = (
-            left_haps_mask * geno[:, :, 0:1] + right_haps_mask * geno[:, :, 1:2]
-        )
+        right_haps_mask = (lanc[:, :, 1:2] == ancestries[None, None, :]).astype(np.int32)
+        geno_masked = left_haps_mask * geno[:, :, 0:1] + right_haps_mask * geno[:, :, 1:2]
         return geno_masked
