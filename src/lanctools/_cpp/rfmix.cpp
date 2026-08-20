@@ -12,11 +12,14 @@
 namespace py = pybind11;
 
 struct CRFPoint {
+  // One RFMix CRF interval and the ancestry value for every haplotype.
   std::string chrom;
   uint32_t spos;
   uint32_t epos;
   std::vector<uint8_t> ancestries;
 
+  // Parse the fixed metadata columns followed by one ancestry column per
+  // haplotype. RFMix uses tab-separated MSP records.
   static CRFPoint from_msp_line(const std::string &line, size_t n_hap) {
     std::vector<std::string> fields;
     std::stringstream ss(line);
@@ -47,6 +50,7 @@ struct CRFPoint {
 };
 
 struct AncestryTract {
+  // A contiguous interval with one ancestry assignment per phased haplotype.
   std::string chrom;
   uint32_t spos;
   uint32_t epos;
@@ -61,8 +65,8 @@ py::dict read_rfmix(const std::string &msp_file) {
   }
 
   std::string line;
-  std::getline(infile, line); // skip population codes
-  std::getline(infile, line); // header
+  std::getline(infile, line); // Population codes.
+  std::getline(infile, line); // Haplotype header.
 
   std::vector<std::string> hdr_fields;
   std::stringstream ss(line);
@@ -100,6 +104,8 @@ py::dict read_rfmix(const std::string &msp_file) {
       continue;
     CRFPoint crf = CRFPoint::from_msp_line(line, n_hap);
 
+    // RFMix intervals are processed in order. A chromosome change closes all
+    // tracts from the previous chromosome before starting the next one.
     if (crf.chrom != cur_chrom && !is_first_crf) {
       for (size_t i = 0; i < n_hap; i += 2) {
         const auto &sample_name = hap_index_to_sample[i].first;
@@ -121,6 +127,7 @@ py::dict read_rfmix(const std::string &msp_file) {
       cur_chrom = crf.chrom;
     } else {
       for (size_t i = 0; i < n_hap; i += 2) {
+        // Emit a tract only when either phased haplotype changes ancestry.
         if (crf.ancestries[i] != prev_anc[i] ||
             crf.ancestries[i + 1] != prev_anc[i + 1]) {
           const auto &sample_name = hap_index_to_sample[i].first;

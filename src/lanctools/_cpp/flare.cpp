@@ -12,6 +12,8 @@
 namespace py = pybind11;
 
 struct AncestryTract {
+  // An ancestry interval before Python converts positions to variant indices.
+  // Missing ancestry is represented by 255.
   std::string chrom;
   uint32_t spos;
   uint32_t epos;
@@ -19,6 +21,8 @@ struct AncestryTract {
   uint8_t anc1;
 };
 
+// Split without allocating substrings; the views remain valid while the
+// original input string is alive.
 void split_views(std::string_view s, char delim,
                  std::vector<std::string_view> &fields) {
   fields.clear();
@@ -38,6 +42,8 @@ void split_views(std::string_view s, char delim,
   }
 }
 
+// FLARE ancestry values are stored in one byte. Empty, missing, malformed, or
+// out-of-range values use 255, matching the parser's missing-value sentinel.
 uint8_t parse_ancestry_value(std::string_view value) {
   if (value.empty() || value == ".")
     return 255;
@@ -57,6 +63,7 @@ uint8_t parse_ancestry_value(std::string_view value) {
   return static_cast<uint8_t>(result);
 }
 
+// Read one colon-delimited FORMAT field by its index.
 uint8_t extract_format_value(std::string_view sample_field, int target_idx) {
   if (target_idx < 0)
     return 255;
@@ -84,6 +91,7 @@ uint8_t extract_format_value(std::string_view sample_field, int target_idx) {
   return 255;
 }
 
+// Return the zero-based index of a named colon-delimited FORMAT field.
 int find_format_index(std::string_view format, std::string_view target) {
   int field_idx = 0;
   size_t start = 0;
@@ -107,6 +115,8 @@ int find_format_index(std::string_view format, std::string_view target) {
   return -1;
 }
 
+// Read arbitrarily long gzip lines in fixed-size chunks and remove line
+// endings. An empty result indicates EOF.
 std::string gz_readline(gzFile file) {
   const size_t chunk_size = 1024 * 1024;
   char buffer[chunk_size];
@@ -127,6 +137,7 @@ std::string gz_readline(gzFile file) {
   return line;
 }
 
+// Close all currently open tracts at the final position of a chromosome.
 void finalize_open_tracts(
     const std::vector<std::string> &sample_ids,
     const std::vector<uint8_t> &prev_anc,
@@ -307,6 +318,8 @@ py::dict read_flare(const std::string &flare_file) {
 
       if (new_anc0 != prev_anc[idx0] || new_anc1 != prev_anc[idx1]) {
 
+        // FLARE reports ancestry at marker positions. Split a changed tract at
+        // the midpoint so the previous call remains valid through midpoint.
         uint32_t midpoint = prev_pos + (pos - prev_pos) / 2;
 
         sample_tracts[i].push_back({cur_chrom, prev_spos[idx0], midpoint,
