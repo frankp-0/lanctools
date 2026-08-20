@@ -161,9 +161,17 @@ def merge_lanc(files: list[str], outfile: str):
                 raise ValueError(
                     f".lanc file ended before sample {sample_idx} was complete"
                 ) from exc
+            for file_idx, (line, declared_nvar) in enumerate(zip(lines, nvars, strict=True)):
+                if int(line[2][-1]) != declared_nvar:
+                    raise ValueError(
+                        f"Input file {files[file_idx]!r} has a final breakpoint that "
+                        "does not match its declared variant count"
+                    )
             left_haps = np.concatenate([line[0] for line in lines])
             right_haps = np.concatenate([line[1] for line in lines])
             breakpoints = np.concatenate([lines[j][2] + offset_bp[j] for j in range(len(lines))])
+            if np.any(np.diff(breakpoints) <= 0):
+                raise ValueError("Merged breakpoints must be strictly increasing")
             linelist = [
                 f"{bp}:{hap0}{hap1}"
                 for bp, hap0, hap1 in zip(breakpoints, left_haps, right_haps, strict=True)

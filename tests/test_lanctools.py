@@ -63,6 +63,44 @@ def test_merge_lanc_rejects_empty_input(tmp_path):
         merge_lanc([], tmp_path / "output.lanc")
 
 
+def test_merge_lanc_writes_offset_breakpoints(tmp_path):
+    first = tmp_path / "first.lanc"
+    first.write_text("3 2\n1:00 3:11\n3:01\n")
+    second = tmp_path / "second.lanc"
+    second.write_text("2 2\n2:10\n2:11\n")
+    output = tmp_path / "merged.lanc"
+
+    merge_lanc([str(first), str(second)], output)
+
+    assert output.read_text() == "5 2\n1:00 3:11 5:10\n3:01 5:11\n"
+
+
+def test_merge_lanc_rejects_incorrect_final_breakpoint(tmp_path):
+    source = tmp_path / "invalid.lanc"
+    source.write_text("3 1\n2:00\n")
+
+    with pytest.raises(ValueError, match="final breakpoint"):
+        merge_lanc([str(source)], tmp_path / "output.lanc")
+
+
+def test_merge_lanc_rejects_breakpoint_collision(tmp_path):
+    first = tmp_path / "first.lanc"
+    first.write_text("3 1\n3:00\n")
+    second = tmp_path / "second.lanc"
+    second.write_text("1 1\n0:11 1:00\n")
+
+    with pytest.raises(ValueError, match="strictly increasing"):
+        merge_lanc([str(first), str(second)], tmp_path / "output.lanc")
+
+
+def test_merge_lanc_rejects_extra_sample_lines(tmp_path):
+    source = tmp_path / "invalid.lanc"
+    source.write_text("1 1\n1:00\n1:00\n")
+
+    with pytest.raises(ValueError, match="more sample lines"):
+        merge_lanc([str(source)], tmp_path / "output.lanc")
+
+
 def test_convert_flare(tmp_path):
     tmp_lanc_path = tmp_path / "test_flare.lanc"
     convert_to_lanc(
