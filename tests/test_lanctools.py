@@ -1,8 +1,11 @@
+import gzip
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from lanctools import LancData, convert_to_lanc, core, merge_lanc
+from lanctools._cpp import read_flare, read_rfmix
 from lanctools.core import _parse_lanc_line, _read_lanc
 
 
@@ -129,6 +132,38 @@ def test_convert_rejects_sample_mismatch(monkeypatch):
             plink_prefix="tests/data/chr20",
             output="output.lanc",
         )
+
+
+def test_read_flare_rejects_unreadable_file(tmp_path):
+    with pytest.raises(RuntimeError, match="Failed to open input VCF"):
+        read_flare(str(tmp_path / "missing.vcf.gz"))
+
+
+def test_read_flare_rejects_missing_header(tmp_path):
+    path = tmp_path / "missing_header.vcf.gz"
+    with gzip.open(path, "wt") as vcf:
+        vcf.write("##fileformat=VCFv4.3\n")
+
+    with pytest.raises(RuntimeError, match="Missing #CHROM header"):
+        read_flare(str(path))
+
+
+def test_read_rfmix_rejects_odd_haplotype_count(tmp_path):
+    path = tmp_path / "odd_haplotypes.msp.tsv"
+    path.write_text("population codes\nchrom\tstart\tend\tcm\tn_snps\t...\tsample.0\n")
+
+    with pytest.raises(RuntimeError, match="must be even"):
+        read_rfmix(str(path))
+
+
+def test_read_rfmix_rejects_malformed_record(tmp_path):
+    path = tmp_path / "malformed.msp.tsv"
+    path.write_text(
+        "population codes\nchrom\tstart\tend\tcm\tn_snps\t...\tsample.0\tsample.1\nchr1\t0\t10\n"
+    )
+
+    with pytest.raises(RuntimeError, match="too few fields"):
+        read_rfmix(str(path))
 
 
 def test_get_info(chr20_data):
