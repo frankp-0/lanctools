@@ -286,6 +286,17 @@ def test_lanc_data_rejects_incomplete_ancestry_names():
         )
 
 
+def test_lanc_data_context_manager_closes_readers():
+    data = LancData(plink_prefix="tests/data/chr20", lanc_file="tests/data/chr20.lanc")
+
+    with data as opened:
+        np.testing.assert_equal(opened.get_lanc(np.array([0], dtype=np.uint32)).shape, (20, 1, 2))
+
+    data.close()
+    with pytest.raises(RuntimeError, match="closed"):
+        data.get_info(np.array([0], dtype=np.uint32))
+
+
 def test_flat_lanc_rejects_mismatched_arrays():
     with pytest.raises(ValueError, match="equal lengths"):
         FlatLanc(

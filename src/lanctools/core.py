@@ -469,26 +469,54 @@ class LancData:
             ancestries (Optional[list[str]): An optional list of ordered ancestry
                 names corresponding to the .lanc file.
         """
-        pgen = PgenReader(bytes(plink_prefix + ".pgen", "utf8"))
-        pvar = PvarReader(bytes(plink_prefix + ".pvar", "utf8"))
-        lanc = _read_lanc(lanc_file)
-        n_variants = pvar.get_variant_ct()
-        if lanc.n_variants != n_variants:
-            raise ValueError("PLINK and .lanc files have different numbers of variants")
-        if lanc.offsets.shape[0] - 1 != pgen.get_raw_sample_ct():
-            raise ValueError("PLINK and .lanc files have different numbers of samples")
+        with ExitStack() as stack:
+            pgen = PgenReader(bytes(plink_prefix + ".pgen", "utf8"))
+            stack.callback(pgen.close)
+            pvar = PvarReader(bytes(plink_prefix + ".pvar", "utf8"))
+            stack.callback(pvar.close)
+            lanc = _read_lanc(lanc_file)
+            n_variants = pvar.get_variant_ct()
+            if lanc.n_variants != n_variants:
+                raise ValueError("PLINK and .lanc files have different numbers of variants")
+            if lanc.offsets.shape[0] - 1 != pgen.get_raw_sample_ct():
+                raise ValueError("PLINK and .lanc files have different numbers of samples")
 
-        if ancestries is None:
-            all_values = np.concatenate([lanc.left_haps, lanc.right_haps])
-            ancestries = [str(i) for i in np.unique(all_values)]
-        elif len(ancestries) <= int(max(lanc.left_haps.max(), lanc.right_haps.max())):
-            raise ValueError("Ancestry names do not cover all values in the .lanc file")
+            if ancestries is None:
+                all_values = np.concatenate([lanc.left_haps, lanc.right_haps])
+                ancestries = [str(i) for i in np.unique(all_values)]
+            elif len(ancestries) <= int(max(lanc.left_haps.max(), lanc.right_haps.max())):
+                raise ValueError("Ancestry names do not cover all values in the .lanc file")
+            stack.pop_all()
 
         self.pgen = pgen
         self.pvar = pvar
         self.lanc = lanc
         self.ancestries = ancestries
         self.plink_prefix = plink_prefix
+        self._closed = False
+
+    def close(self) -> None:
+        """Release the underlying PLINK readers.
+
+        Calling ``close`` more than once is safe. Query methods cannot be used
+        after the readers have been closed.
+        """
+        if not self._closed:
+            self.pgen.close()
+            self.pvar.close()
+            self._closed = True
+
+    def __enter__(self) -> LancData:
+        if self._closed:
+            raise RuntimeError("LancData is closed")
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.close()
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise RuntimeError("LancData is closed")
 
     def get_info(self, indices: NDArray[np.uint32]) -> DataFrame:
         """Query info for a set of variants.
@@ -506,6 +534,7 @@ class LancData:
                 - ID (str): Variant identifier. \n
         """
 
+        self._ensure_open()
         return _get_info(self.pvar, _validate_indices(indices, self.pvar.get_variant_ct()))
 
     def get_lanc(self, indices: NDArray[np.unsignedinteger]) -> NDArray[np.uint8]:
@@ -518,6 +547,7 @@ class LancData:
             An array of ancestries, shape (N, V, 2)
         """
 
+        self._ensure_open()
         return self.lanc.get_lanc(_validate_indices(indices, self.pvar.get_variant_ct()))
 
     def get_lanc_dosage(self, indices: NDArray[np.uint32]) -> NDArray[np.int32]:
@@ -531,6 +561,7 @@ class LancData:
                 number of ancestries)
         """
 
+        self._ensure_open()
         indices = _validate_indices(indices, self.pvar.get_variant_ct())
         lanc = np.asarray(self.get_lanc(indices), dtype=np.uint8)
         ancestries = np.arange(len(self.ancestries), dtype=np.uint8)
@@ -548,6 +579,7 @@ class LancData:
             An array of phased genotypes, shape (N, V, 2)
         """
 
+        self._ensure_open()
         return _get_geno(
             self.pgen,
             _validate_indices(indices, self.pvar.get_variant_ct()),
@@ -562,6 +594,7 @@ class LancData:
         Returns:
             An array of genotypes masked by ancestry, shape (N, V, 2)
         """
+        self._ensure_open()
         indices = _validate_indices(indices, self.pvar.get_variant_ct())
         geno = np.asarray(self.get_geno(indices), dtype=np.int32)
         lanc = np.asarray(self.lanc.get_lanc(indices), dtype=np.uint8)
