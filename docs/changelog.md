@@ -1,10 +1,10 @@
 # CHANGELOG
 
-Notable changes to lanctools (starting with v0.9.0) will be documented here.
+Notable changes to lanctools (starting with v1.0.0) will be documented here.
 
-## [v0.9.0] - 2026-08-20
+## [v1.0.0] - 2026-08-20
 
-[v0.9.0]: https://github.com/frankp-0/lanctools/compare/v0.8.0...v0.9.0>
+[v1.0.0]: https://github.com/frankp-0/lanctools/compare/v0.8.0...v1.0.0>
 
 ### Added
 

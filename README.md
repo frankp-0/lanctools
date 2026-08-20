@@ -10,13 +10,6 @@
 
 Full documentation can be found [here](https://frankp-0.github.io/lanctools/)
 
-## Development Status
-
-This project is in early development and is only intended for academic use.
-
-Per semantic versioning conventions, anything may change at any time. The API
-should not be considered stable, and breaking changes may occur without notice.
-
 ## References
 
 - Hou, K. et al. Admix-kit: an integrated toolkit and pipeline for genetic analyses of admixed populations. Bioinformatics 40, btae148 (2024). [paper](https://doi-org.libproxy.lib.unc.edu/10.1093/bioinformatics/btae148) [software](https://github.com/KangchengHou/admix-kit)
