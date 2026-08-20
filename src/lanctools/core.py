@@ -352,6 +352,19 @@ def _get_geno(pgen: PgenReader, indices: NDArray[np.unsignedinteger]) -> NDArray
     return alleles.reshape(v, n, 2).transpose(1, 0, 2)
 
 
+def _validate_indices(indices: NDArray[np.integer], n_variants: int) -> NDArray[np.integer]:
+    indices = np.asarray(indices)
+    if indices.ndim != 1:
+        raise ValueError("Variant indices must be a one-dimensional array")
+    if not np.issubdtype(indices.dtype, np.integer):
+        raise TypeError("Variant indices must have an integer dtype")
+    if np.issubdtype(indices.dtype, np.signedinteger) and np.any(indices < 0):
+        raise IndexError("Variant indices must be non-negative")
+    if np.any(indices >= n_variants):
+        raise IndexError("Variant index is outside the PLINK variant range")
+    return indices
+
+
 ### ─────────────────────────────────────────────────────────────
 ### Data structures
 ### ─────────────────────────────────────────────────────────────
@@ -375,6 +388,18 @@ class FlatLanc:
         offsets: NDArray[np.uint32],
         n_variants: int | None = None,
     ):
+        arrays = (left_haps, right_haps, breakpoints, offsets)
+        if any(np.asarray(array).ndim != 1 for array in arrays):
+            raise ValueError("FlatLanc arrays must be one-dimensional")
+        if not (len(left_haps) == len(right_haps) == len(breakpoints)):
+            raise ValueError("FlatLanc tract arrays must have equal lengths")
+        if len(offsets) == 0 or offsets[0] != 0 or offsets[-1] != len(breakpoints):
+            raise ValueError("FlatLanc offsets must delimit the tract arrays")
+        if np.any(np.diff(offsets) < 0):
+            raise ValueError("FlatLanc offsets must be non-decreasing")
+        if n_variants is not None and n_variants <= 0:
+            raise ValueError("FlatLanc variant count must be positive")
+
         self.left_haps = left_haps
         self.right_haps = right_haps
         self.breakpoints = breakpoints
@@ -391,15 +416,18 @@ class FlatLanc:
             An array of ancestries, shape (N, V, 2)
         """
 
-        indices = np.asarray(indices)
-        if indices.ndim != 1:
-            raise ValueError("Variant indices must be a one-dimensional array")
-        if not np.issubdtype(indices.dtype, np.integer):
-            raise TypeError("Variant indices must have an integer dtype")
-        if np.issubdtype(indices.dtype, np.signedinteger) and np.any(indices < 0):
-            raise IndexError("Variant indices must be non-negative")
-        if self.n_variants is not None and np.any(indices >= self.n_variants):
-            raise IndexError("Variant index is outside the .lanc variant range")
+        if self.n_variants is not None:
+            indices = _validate_indices(indices, self.n_variants)
+        else:
+            indices = np.asarray(indices)
+            if indices.ndim != 1:
+                raise ValueError("Variant indices must be a one-dimensional array")
+            if not np.issubdtype(indices.dtype, np.integer):
+                raise TypeError("Variant indices must have an integer dtype")
+            if np.issubdtype(indices.dtype, np.signedinteger) and np.any(indices < 0):
+                raise IndexError("Variant indices must be non-negative")
+            if np.any(indices >= self.breakpoints[-1]):
+                raise IndexError("Variant index is outside the .lanc variant range")
 
         idx_order = np.argsort(indices)
         idx_ordered = np.ascontiguousarray(indices[idx_order])
@@ -444,6 +472,9 @@ class LancData:
         pgen = PgenReader(bytes(plink_prefix + ".pgen", "utf8"))
         pvar = PvarReader(bytes(plink_prefix + ".pvar", "utf8"))
         lanc = _read_lanc(lanc_file)
+        n_variants = pvar.get_variant_ct()
+        if lanc.n_variants != n_variants:
+            raise ValueError("PLINK and .lanc files have different numbers of variants")
         if lanc.offsets.shape[0] - 1 != pgen.get_raw_sample_ct():
             raise ValueError("PLINK and .lanc files have different numbers of samples")
 
@@ -475,7 +506,7 @@ class LancData:
                 - ID (str): Variant identifier. \n
         """
 
-        return _get_info(self.pvar, indices)
+        return _get_info(self.pvar, _validate_indices(indices, self.pvar.get_variant_ct()))
 
     def get_lanc(self, indices: NDArray[np.unsignedinteger]) -> NDArray[np.uint8]:
         """Query phased local ancestry.
@@ -487,9 +518,9 @@ class LancData:
             An array of ancestries, shape (N, V, 2)
         """
 
-        return self.lanc.get_lanc(indices)
+        return self.lanc.get_lanc(_validate_indices(indices, self.pvar.get_variant_ct()))
 
-    def get_lanc_dosage(self, indices: NDArray[np.uint32]) -> NDArray[np.uint8]:
+    def get_lanc_dosage(self, indices: NDArray[np.uint32]) -> NDArray[np.int32]:
         """Query local ancestry dosage.
 
         Args:
@@ -500,6 +531,7 @@ class LancData:
                 number of ancestries)
         """
 
+        indices = _validate_indices(indices, self.pvar.get_variant_ct())
         lanc = np.asarray(self.get_lanc(indices), dtype=np.uint8)
         ancestries = np.arange(len(self.ancestries), dtype=np.uint8)
         left_haps_mask = (lanc[:, :, 0:1] == ancestries[None, None, :]).astype(np.int32)
@@ -516,7 +548,10 @@ class LancData:
             An array of phased genotypes, shape (N, V, 2)
         """
 
-        return _get_geno(self.pgen, indices)
+        return _get_geno(
+            self.pgen,
+            _validate_indices(indices, self.pvar.get_variant_ct()),
+        )
 
     def get_lanc_geno(self, indices: NDArray[np.unsignedinteger]) -> NDArray[np.int32]:
         """Query genotypes deconvoluted/masked by ancestry.
@@ -527,6 +562,7 @@ class LancData:
         Returns:
             An array of genotypes masked by ancestry, shape (N, V, 2)
         """
+        indices = _validate_indices(indices, self.pvar.get_variant_ct())
         geno = np.asarray(self.get_geno(indices), dtype=np.int32)
         lanc = np.asarray(self.lanc.get_lanc(indices), dtype=np.uint8)
         ancestries = np.arange(len(self.ancestries), dtype=np.uint8)

@@ -1,10 +1,11 @@
 import gzip
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from lanctools import LancData, convert_to_lanc, core, merge_lanc
+from lanctools import FlatLanc, LancData, convert_to_lanc, core, merge_lanc
 from lanctools._cpp import read_flare, read_rfmix
 from lanctools.core import _parse_lanc_line, _read_lanc
 
@@ -248,6 +249,51 @@ def test_get_lanc(chr20_data):
 def test_get_lanc_rejects_out_of_bounds_indices(chr20_data):
     with pytest.raises(IndexError, match="outside"):
         chr20_data.get_lanc(np.array([40], dtype=np.uint32))
+
+
+@pytest.mark.parametrize(
+    ("indices", "error", "message"),
+    [
+        (np.array([[1]], dtype=np.uint32), ValueError, "one-dimensional"),
+        (np.array([1.0]), TypeError, "integer dtype"),
+        (np.array([-1], dtype=np.int32), IndexError, "non-negative"),
+        (np.array([40], dtype=np.uint32), IndexError, "outside"),
+    ],
+)
+def test_query_methods_validate_indices(chr20_data, indices, error, message):
+    with pytest.raises(error, match=message):
+        chr20_data.get_info(indices)
+
+    with pytest.raises(error, match=message):
+        chr20_data.get_geno(indices)
+
+
+def test_lanc_data_rejects_variant_count_mismatch(tmp_path):
+    lanc_path = tmp_path / "wrong_variant_count.lanc"
+    lines = Path("tests/data/chr20.lanc").read_text().splitlines()
+    lanc_path.write_text("39 20\n" + "\n".join(lines[1:]) + "\n")
+
+    with pytest.raises(ValueError, match="numbers of variants"):
+        LancData(plink_prefix="tests/data/chr20", lanc_file=str(lanc_path))
+
+
+def test_lanc_data_rejects_incomplete_ancestry_names():
+    with pytest.raises(ValueError, match="Ancestry names"):
+        LancData(
+            plink_prefix="tests/data/chr20",
+            lanc_file="tests/data/chr20.lanc",
+            ancestries=["only"],
+        )
+
+
+def test_flat_lanc_rejects_mismatched_arrays():
+    with pytest.raises(ValueError, match="equal lengths"):
+        FlatLanc(
+            np.array([0], dtype=np.uint8),
+            np.array([], dtype=np.uint8),
+            np.array([1], dtype=np.uint32),
+            np.array([0, 1], dtype=np.uint32),
+        )
 
 
 def test_get_lanc_dosage(chr20_data):
