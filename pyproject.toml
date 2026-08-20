@@ -66,8 +66,14 @@ requires = ["scikit-build-core>=0.10", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [dependency-groups]
-dev = ["ipython>=8.37.0", "pytest>=9.0.2", "pytest-cov>=7.0.0", "ruff>=0.16.3"]
-docs = ["mkdocstrings-python>=2.0.1", "zensical>=0.0.17"]
+dev = [
+  "ipython>=8.37.0",
+  "pytest>=9.0.2",
+  "pytest-cov>=7.0.0",
+  "ruff>=0.16.3",
+  "mkdocstrings-python>=2.0.1",
+  "zensical>=0.0.17",
+]
 
 
 [tool.setuptools.packages.find]

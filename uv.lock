@@ -317,12 +317,10 @@ dependencies = [
 dev = [
     { name = "ipython", version = "8.37.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ipython", version = "9.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "mkdocstrings-python" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "ruff" },
-]
-docs = [
-    { name = "mkdocstrings-python" },
     { name = "zensical" },
 ]
 
@@ -338,12 +336,10 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "ipython", specifier = ">=8.37.0" },
+    { name = "mkdocstrings-python", specifier = ">=2.0.1" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
     { name = "ruff", specifier = ">=0.16.3" },
-]
-docs = [
-    { name = "mkdocstrings-python", specifier = ">=2.0.1" },
     { name = "zensical", specifier = ">=0.0.17" },
 ]
 
