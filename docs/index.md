@@ -32,11 +32,7 @@ ancestry and genotype data. Examples are provided below.
 import numpy as np
 from lanctools import LancData
 
-ld = LancData(
-    plink_prefix="chr1",
-    lanc_file="chr1.lanc",
-    ancestries=["YRI", "CEU"]
-)
+ld = LancData(plink_prefix="chr1", lanc_file="chr1.lanc", ancestries=["YRI", "CEU"])
 
 idx_var = np.arange(100, dtype=np.uint32)
 
@@ -48,7 +44,6 @@ geno = ld.get_geno(idx_var)
 
 # Get ancestry-masked genotypes: shape (N, 100, len(ancestries))
 lanc_geno = ld.get_lanc_geno(idx_var)
-
 ```
 
 ### Converting FLARE or RFMix Files to .lanc
@@ -60,12 +55,7 @@ python function `convert_to_lanc`.
 ```python
 from lanctools import convert_to_lanc
 
-convert_to_lanc(
-    file="chr1.anc.vcf.gz",
-    file_fmt="FLARE",
-    plink_prefix="chr1",
-    output="chr1.lanc"
-)
+convert_to_lanc(file="chr1.anc.vcf.gz", file_fmt="FLARE", plink_prefix="chr1", output="chr1.lanc")
 ```
 
 ### Command-Line Interface

@@ -8,9 +8,7 @@ from lanctools.core import _parse_lanc_line, _read_lanc
 
 @pytest.fixture
 def chr20_data():
-    dataset = LancData(
-        plink_prefix="tests/data/chr20", lanc_file="tests/data/chr20.lanc"
-    )
+    dataset = LancData(plink_prefix="tests/data/chr20", lanc_file="tests/data/chr20.lanc")
     return dataset
 
 
