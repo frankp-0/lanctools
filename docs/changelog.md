@@ -2,9 +2,15 @@
 
 Notable changes to lanctools (starting with v1.0.0) will be documented here.
 
-## [v1.0.0] - 2026-08-20
+## [v1.0.1] - 2026-08-20
 
-[v1.0.0]: https://github.com/frankp-0/lanctools/compare/v0.8.0...v1.0.0>
+[v1.0.1]: https://github.com/frankp-0/lanctools/compare/v0.1.0...v1.0.1>
+
+### Fixed
+
+- Match breakpoints with .pvar file by CHR,POS not just POS
+
+## [v1.0.0] - 2026-08-20
 
 ### Added
 
