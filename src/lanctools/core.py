@@ -275,16 +275,25 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
     df.loc[df["spos"] < min_pvar, "spos"] = min_pvar
 
     ## Get index of first pvar pos >= tract epos
-    df["idx"] = np.searchsorted(
-        np.asarray(df_pvar["BP"], dtype=int),
-        np.asarray(df["epos"], dtype=int),
-        side="right",
-    )
+    df["idx"] = -1
+    for chrom, df_chr in df.groupby("chrom", sort=False, observed=True):
+        pvar_chr = df_pvar[df_pvar["CHR"] == chrom]
+
+        local_idx = np.searchsorted(
+            np.asarray(pvar_chr["BP"], dtype=int),
+            np.asarray(df_chr["epos"], dtype=int),
+            side="right",
+        )
+
+        # Convert chromosome-local position to global df_pvar position
+        offset = pvar_chr.index[0]
+
+        df.loc[df_chr.index, "idx"] = offset + local_idx
 
     ## If multiple tracts have same idx, pick last one
     df = (
-        df.sort_values(["sample", "chrom", "idx"])  # pyright: ignore[reportCallIssue]
-        .groupby(["sample", "chrom", "idx"], as_index=False, observed=True)
+        df.sort_values(["sample", "idx"])  # pyright: ignore[reportCallIssue]
+        .groupby(["sample", "idx"], as_index=False, observed=True)
         .tail(1)  # last row per group
     )
 
