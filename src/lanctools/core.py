@@ -262,24 +262,25 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
     df["sample"] = pd.Categorical(df["sample"], categories=samples, ordered=True)
     df = df.sort_values(by=["sample", "chrom", "spos"]).reset_index(drop=True)  # pyright: ignore[reportCallIssue]
 
-    ## Exclude tracts starting after or ending before pgen range
-    # TODO: This needs to be per-chromosome
-    min_pvar = int(np.min(df_pvar["BP"]))
-    max_pvar = int(np.max(df_pvar["BP"]))
-    tracts_mask = (df["spos"] < max_pvar) & (df["epos"] > min_pvar)
-    df = df[tracts_mask]
-    if df.empty:
-        raise ValueError("No ancestry tracts overlap the PLINK variant range")
-
-    ## Clip tracts positions to pgen start, end
-    df.loc[df["epos"] > max_pvar, "epos"] = max_pvar
-    df.loc[df["spos"] < min_pvar, "spos"] = min_pvar
-
-    ## Get index of first pvar pos >= tract epos
+    ## Exclude tracts starting after or ending before the per-chromosome pgen range
     df["idx"] = -1
-    for chrom, df_chr in df.groupby("chrom", sort=False, observed=True):
+    for chrom, df_chr in list(df.groupby("chrom", sort=False, observed=True)):
         pvar_chr = df_pvar[df_pvar["CHR"] == chrom]
+        if pvar_chr.empty:
+            continue
 
+        min_pvar = int(pvar_chr["BP"].min())
+        max_pvar = int(pvar_chr["BP"].max())
+        tracts_mask = (df_chr["spos"] < max_pvar) & (df_chr["epos"] > min_pvar)
+        df_chr = df_chr[tracts_mask].copy()
+        if df_chr.empty:
+            continue
+
+        ## Clip tracts positions to pgen start, end for this chromosome
+        df_chr.loc[df_chr["epos"] > max_pvar, "epos"] = max_pvar
+        df_chr.loc[df_chr["spos"] < min_pvar, "spos"] = min_pvar
+
+        ## Get index of first pvar pos >= tract epos
         local_idx = np.searchsorted(
             np.asarray(pvar_chr["BP"], dtype=int),
             np.asarray(df_chr["epos"], dtype=int),
@@ -290,6 +291,10 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
         offset = pvar_chr.index[0]
 
         df.loc[df_chr.index, "idx"] = offset + local_idx
+
+    df = df[df["idx"] >= 0].copy()
+    if df.empty:
+        raise ValueError("No ancestry tracts overlap the PLINK variant range")
 
     ## If multiple tracts have same idx, pick last one
     df = (
