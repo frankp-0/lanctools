@@ -284,7 +284,7 @@ py::dict read_flare(const std::string &flare_file) {
 
     if (chrom_view != cur_chrom) {
       finalize_open_tracts(sample_ids, prev_anc, prev_spos, sample_tracts,
-                           cur_chrom, pos - 1);
+                           cur_chrom, prev_pos);
 
       cur_chrom.assign(chrom_view);
 

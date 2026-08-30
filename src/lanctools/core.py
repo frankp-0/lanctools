@@ -263,6 +263,7 @@ def convert_to_lanc(file: str, file_fmt: str, plink_prefix: str, output: str):
     df = df.sort_values(by=["sample", "chrom", "spos"]).reset_index(drop=True)  # pyright: ignore[reportCallIssue]
 
     ## Exclude tracts starting after or ending before pgen range
+    # TODO: This needs to be per-chromosome
     min_pvar = int(np.min(df_pvar["BP"]))
     max_pvar = int(np.max(df_pvar["BP"]))
     tracts_mask = (df["spos"] < max_pvar) & (df["epos"] > min_pvar)
