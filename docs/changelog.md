@@ -2,6 +2,15 @@
 
 Notable changes to lanctools (starting with v1.0.0) will be documented here.
 
+## [v1.0.3] - 2026-08-30
+
+[v1.0.3]: https://github.com/frankp-0/lanctools/compare/v1.0.1...v1.0.3>
+
+### Fixed
+
+- Bug closing tracts on chromosome switches
+- Use per-chromosome min/max positions to clip tracts
+
 ## [v1.0.1] - 2026-08-20
 
 [v1.0.1]: https://github.com/frankp-0/lanctools/compare/v0.1.0...v1.0.1>
